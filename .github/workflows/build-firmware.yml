@@ -1,0 +1,359 @@
+name: Build Firmware
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release Type'
+        required: true
+        default: 'none'
+        type: choice
+        options:
+          - none
+          - release
+          - prerelease
+      release_notes:
+        description: 'Release Notes'
+        required: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Generate build version
+        id: version
+        run: |
+          # Read date and time from a single clock sample to avoid midnight skew.
+          read -r build_date build_time < <(TZ=Asia/Shanghai date +'%Y%m%d %H%M')
+          repo_commit=$(git rev-parse --short=8 HEAD)
+          version_number="${build_date}-${build_time}-${repo_commit}"
+
+          echo "date=$build_date" >> $GITHUB_OUTPUT
+          echo "time=$build_time" >> $GITHUB_OUTPUT
+          echo "repo_commit=$repo_commit" >> $GITHUB_OUTPUT
+          echo "version_number=$version_number" >> $GITHUB_OUTPUT
+          echo "Build version: $version_number"
+
+      - name: Setup build environment
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential clang gcc g++ binutils bzip2 gawk gettext git libncurses-dev libssl-dev python3 python3-setuptools rsync unzip wget xsltproc zlib1g-dev file which perl sed make
+
+      - name: Install feeds
+        run: |
+          for d in feeds/*/; do
+              [ -d "$d/.git" ] || continue
+              git -C "$d" reset -q --hard
+              git -C "$d" clean -qfd
+          done
+
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+          bash scripts/fix-stale-golang-host.sh
+
+      - name: Apply feed patches
+        run: FEED_PATCHES_STRICT=1 bash scripts/apply-feed-patches.sh
+
+      - name: Configure
+        run: |
+          cp 1710.config .config
+          # Keep this options heredoc in sync with docs/build.md section "## 2."
+          cat > /tmp/xr1710g-options.conf <<'EOF'
+          CONFIG_KERNEL_DEBUG_INFO=y
+          # CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set
+          CONFIG_KERNEL_DEBUG_INFO_BTF=y
+          CONFIG_KERNEL_NETKIT=y
+          # CONFIG_PACKAGE_luci-app-vlmcsd is not set
+          # CONFIG_PACKAGE_luci-i18n-vlmcsd-zh-cn is not set
+          # CONFIG_PACKAGE_vlmcsd is not set
+          # CONFIG_PACKAGE_luci-app-ddns-go is not set
+          # CONFIG_PACKAGE_luci-i18n-ddns-go-zh-cn is not set
+          # CONFIG_PACKAGE_ddns-go is not set
+          # CONFIG_PACKAGE_luci-app-ddns is not set
+          # CONFIG_PACKAGE_luci-i18n-ddns-zh-cn is not set
+          # CONFIG_PACKAGE_ddns-scripts is not set
+          # CONFIG_PACKAGE_ddns-scripts-aliyun is not set
+          # CONFIG_PACKAGE_ddns-scripts-cloudflare is not set
+          # CONFIG_PACKAGE_ddns-scripts-dnspod is not set
+          # CONFIG_PACKAGE_ddns-scripts-services is not set
+          # CONFIG_PACKAGE_luci-app-lucky is not set
+          # CONFIG_PACKAGE_luci-i18n-lucky-zh-cn is not set
+          # CONFIG_PACKAGE_lucky is not set
+          # CONFIG_PACKAGE_luci-app-zerotier is not set
+          # CONFIG_PACKAGE_luci-i18n-zerotier-zh-cn is not set
+          # CONFIG_PACKAGE_zerotier is not set
+          # CONFIG_PACKAGE_luci-app-wechatpush is not set
+          # CONFIG_PACKAGE_luci-i18n-wechatpush-zh-cn is not set
+          # CONFIG_PACKAGE_luci-app-pushbot is not set
+          # CONFIG_PACKAGE_luci-i18n-pushbot-zh-cn is not set
+          CONFIG_PACKAGE_kmod-nft-queue=y
+          CONFIG_PACKAGE_kmod-nfnetlink-queue=y
+          CONFIG_PACKAGE_airoha-an7581-mt7996-board=y
+          # CONFIG_FEED_pon_drivers is not set
+          # CONFIG_FEED_onu_config is not set
+          # CONFIG_FEED_pon_userspace is not set
+          # CONFIG_FEED_pushbot is not set
+          # CONFIG_FEED_uniwrt is not set
+          # CONFIG_FEED_easytier is not set
+          # CONFIG_PACKAGE_luci-theme-uniwrt is not set
+          # CONFIG_PACKAGE_oxidns is not set
+          # CONFIG_PACKAGE_luci-app-oxidns is not set
+          # CONFIG_PACKAGE_luci-i18n-oxidns-zh-cn is not set
+          CONFIG_PACKAGE_ca-bundle=y
+          CONFIG_PACKAGE_kmod-sched-core=y
+          CONFIG_PACKAGE_kmod-sched-bpf=y
+          CONFIG_PACKAGE_kmod-veth=y
+          CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
+          CONFIG_PACKAGE_kmod-nft-tproxy=y
+          CONFIG_PACKAGE_yq=y
+          CONFIG_PACKAGE_jq=y
+          CONFIG_PACKAGE_curl=y
+          CONFIG_PACKAGE_firewall4=y
+          CONFIG_PACKAGE_ip-full=y
+          CONFIG_PACKAGE_kmod-inet-diag=y
+          CONFIG_PACKAGE_kmod-nft-socket=y
+          CONFIG_PACKAGE_kmod-tun=y
+          CONFIG_PACKAGE_kmod-dummy=y
+          CONFIG_PACKAGE_luci-app-smartdns=y
+          CONFIG_PACKAGE_luci-i18n-smartdns-zh-cn=y
+          # CONFIG_FEED_mosdns is not set
+          # CONFIG_PACKAGE_mosdns is not set
+          # CONFIG_PACKAGE_luci-app-mosdns is not set
+          # CONFIG_PACKAGE_luci-i18n-mosdns-zh-cn is not set
+          # CONFIG_PACKAGE_geo2txt is not set
+          CONFIG_PACKAGE_bridger=y
+          CONFIG_PACKAGE_kmod-crypto-hw-eip93=y
+          CONFIG_PACKAGE_kmod-cryptodev=y
+          CONFIG_PACKAGE_kmod-crypto-user=y
+          CONFIG_PACKAGE_luci-app-clients=y
+          CONFIG_PACKAGE_luci-i18n-clients-zh-cn=y
+          CONFIG_PACKAGE_nlbwmon=y
+          CONFIG_PACKAGE_arp-scan=y
+          CONFIG_PACKAGE_arp-scan-database=y
+          CONFIG_PACKAGE_flock=y
+          CONFIG_PACKAGE_mount-utils=y
+          CONFIG_PACKAGE_pppoe-discovery=y
+          # CONFIG_PACKAGE_luci-app-airoha-factory is not set
+          # CONFIG_PACKAGE_luci-i18n-airoha-factory-zh-cn is not set
+          # CONFIG_PACKAGE_luci-app-airoha-recovery is not set
+          # CONFIG_PACKAGE_luci-i18n-airoha-recovery-zh-cn is not set
+          # CONFIG_PACKAGE_usteer is not set
+          # CONFIG_PACKAGE_luci-app-usteer is not set
+          # CONFIG_PACKAGE_luci-i18n-usteer-zh-cn is not set
+          # CONFIG_PACKAGE_xray-core is not set
+          # CONFIG_PACKAGE_udpxy is not set
+          # CONFIG_PACKAGE_luci-app-udpxy is not set
+          # CONFIG_PACKAGE_luci-i18n-udpxy-zh-cn is not set
+          # CONFIG_PACKAGE_msd_lite is not set
+          # CONFIG_PACKAGE_luci-app-msd_lite is not set
+          # CONFIG_PACKAGE_luci-i18n-msd_lite-zh-cn is not set
+          # CONFIG_PACKAGE_rtp2httpd is not set
+          # CONFIG_PACKAGE_luci-app-rtp2httpd is not set
+          # CONFIG_PACKAGE_luci-i18n-rtp2httpd-zh-cn is not set
+          # CONFIG_PACKAGE_luci-app-mesh-conf is not set
+          # CONFIG_PACKAGE_luci-i18n-mesh-conf-zh-cn is not set
+          # CONFIG_PACKAGE_luci-app-wifihistory is not set
+          # CONFIG_PACKAGE_luci-i18n-wifihistory-zh-cn is not set
+          # CONFIG_PACKAGE_luci-proto-wireguard is not set
+          CONFIG_PACKAGE_iperf3=y
+          CONFIG_PACKAGE_socat=y
+          CONFIG_OPENSSL_ENGINE=y
+          CONFIG_OPENSSL_ENGINE_BUILTIN=y
+          CONFIG_OPENSSL_ENGINE_BUILTIN_DEVCRYPTO=y
+          CONFIG_PREINITOPT=y
+          CONFIG_PACKAGE_relayd=y
+          CONFIG_PACKAGE_luci-proto-relay=y
+          # CONFIG_BUSYBOX_CONFIG_NTPD is not set
+          # CONFIG_BUSYBOX_CONFIG_FEATURE_NTPD_SERVER is not set
+          CONFIG_PACKAGE_chrony=y
+          CONFIG_PACKAGE_luci-app-chrony=y
+          CONFIG_PACKAGE_luci-i18n-chrony-zh-cn=y
+          EOF
+
+          awk '
+            NR==FNR { k=$0; sub(/^# /,"",k); sub(/( is not set|=y)$/,"",k); drop[k]=1; next }
+            { k=$0; sub(/^# /,"",k); sub(/(=.*| is not set)$/,"",k); if (k in drop) next; print }
+          ' /tmp/xr1710g-options.conf .config > .config.new && mv .config.new .config
+
+          cat /tmp/xr1710g-options.conf >> .config
+
+          VERSION_NUMBER='${{ steps.version.outputs.version_number }}' \
+          VERSION_CODE='${{ steps.version.outputs.version_number }}' \
+          REPO_OWNER='${{ github.repository_owner }}' \
+          bash scripts/set-build-version.sh .config
+          make defconfig
+          bash scripts/check-gemtek-profile-isolation.sh --config .config
+          grep -E 'CONFIG_(IMAGEOPT|EXTRA_IMAGE_NAME|VERSIONOPT|VERSION_DIST|VERSION_NUMBER|VERSION_CODE|VERSION_FILENAMES|VERSION_CODE_FILENAMES)[= ]' .config
+
+      - name: Download sources
+        run: make download -j$(nproc)
+
+      - name: Build Firmware
+        shell: bash
+        run: |
+          make -j"$(nproc)" world 2>&1 | tee build.log
+
+      - name: Verbose retry on build failure
+        if: failure()
+        shell: bash
+        run: |
+          failed_pkg=$(grep 'ERROR:.*failed to build' build.log | head -1 | sed 's/.*ERROR: \(.*\) failed to build.*/\1/' || true)
+          if [ -n "$failed_pkg" ]; then
+            echo "=== Rebuilding $failed_pkg with V=s ==="
+            make "package/$failed_pkg/compile" V=s -j1 2>&1 | tee build-verbose.log || true
+            echo "=== First errors in build-verbose.log ==="
+            grep -nE "error:|Error [0-9]|FAILED|Patch failed|No rule to make target" build-verbose.log | head -40 || true
+            echo "=== tail of build-verbose.log ==="
+            tail -80 build-verbose.log || true
+          else
+            echo "No failing package found in build.log" >&2
+            tail -150 build.log || true
+          fi
+
+      - name: Verify device isolation
+        shell: bash
+        run: |
+          bash scripts/check-firmware-artifacts.sh \
+            --config .config \
+            --directory bin/targets/airoha/an7581
+          kernel_config=$(find build_dir/target-aarch64_cortex-a53_musl/linux-airoha_an7581 -path '*/linux-*/.config' -print -quit)
+          test -n "$kernel_config"
+          # With per-device rootfs, bin/*.manifest lists only the shared base
+          # rootfs; device packages live in each target-dir-<id> apk database.
+          kdir=$(dirname "$(dirname "$kernel_config")")
+          manifest_args=()
+          for db in "$kdir"/target-dir-*/lib/apk/db/installed; do
+            [ -f "$db" ] || continue
+            rootfs_id=$(basename "$(dirname "$(dirname "$(dirname "$(dirname "$db")")")")")
+            manifest="$RUNNER_TEMP/${rootfs_id}.manifest"
+            sed -n 's/^P://p' "$db" | sort > "$manifest"
+            echo "$rootfs_id: $(wc -l < "$manifest") packages"
+            manifest_args+=(--manifest "$manifest")
+          done
+          if [ "${#manifest_args[@]}" -eq 0 ]; then
+            echo "no per-device rootfs package database found under $kdir" >&2
+            exit 1
+          fi
+          bash scripts/check-gemtek-profile-isolation.sh \
+            --config .config \
+            --kernel-config "$kernel_config" \
+            "${manifest_args[@]}"
+
+      - name: Rename firmware files
+        shell: bash
+        env:
+          TARGET_DIR: bin/targets/airoha/an7581
+        run: |
+          set -euo pipefail
+          # Drop the board/subtarget/profile infix from release file names:
+          #   *-airoha-an7581-gemtek_xr1710g-ubi-* -> *-ubi-*
+          #   *-airoha-an7581-gemtek_xr1710g-*     -> *-*
+          infix='-airoha-an7581-gemtek_xr1710g'
+          cd "$TARGET_DIR"
+          test -f sha256sums
+          while IFS= read -r -d '' path; do
+            old="${path#./}"
+            new="${old//"$infix"/}"
+            if [ -e "$new" ] || [ -L "$new" ]; then
+              echo "refusing to overwrite existing file: $new (from $old)" >&2
+              exit 1
+            fi
+            mv -n -- "$old" "$new"
+            test -f "$new"
+            test ! -e "$old"
+            echo "Renamed: $old -> $new"
+          done < <(find . -maxdepth 1 -type f -name "*${infix}*" -print0)
+
+          sed -i.orig -e "s/${infix}//g" sha256sums
+          rm -f sha256sums.orig
+          grep -E '\.itb$' sha256sums | sha256sum -c -
+
+          total=0; ubi=0; stock=0
+          for f in ./*.itb; do
+            [ -f "$f" ] || continue
+            total=$((total + 1))
+            case "$f" in
+              *-ubi-squashfs-sysupgrade.itb) ubi=$((ubi + 1)) ;;
+              *-squashfs-sysupgrade.itb) stock=$((stock + 1)) ;;
+            esac
+          done
+          if [ "$total" -ne 2 ] || [ "$ubi" -ne 1 ] || [ "$stock" -ne 1 ]; then
+            echo "expected exactly one stock and one -ubi sysupgrade .itb (total=$total ubi=$ubi stock=$stock)" >&2
+            ls -la . >&2
+            exit 1
+          fi
+          ls -la .
+
+      - name: Check build status
+        if: always()
+        run: |
+          if [ -f build.log ]; then
+            bash scripts/summarize-build-errors.sh build.log || true
+            tail -100 build.log
+          fi
+          echo "=== List all files in bin/targets/airoha/an7581/ ==="
+          ls -la bin/targets/airoha/an7581/ 2>/dev/null || echo "No files found in an7581 directory"
+          echo "=== List all files in bin/targets/airoha/ ==="
+          ls -la bin/targets/airoha/ 2>/dev/null || echo "No files found in airoha directory"
+          echo "=== List all files in bin/targets/ ==="
+          ls -la bin/targets/ 2>/dev/null || echo "No files found in targets directory"
+          echo "=== List all files in bin/ ==="
+          ls -la bin/ 2>/dev/null || echo "No files found in bin directory"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: xr1710g-firmware
+          path: |
+            build.log
+            build-verbose.log
+            bin/targets/airoha/an7581/*.itb
+            bin/targets/airoha/an7581/*manifest
+            bin/targets/airoha/an7581/config.buildinfo
+            bin/targets/airoha/an7581/feeds.buildinfo
+            bin/targets/airoha/an7581/version.buildinfo
+            bin/targets/airoha/an7581/sha256sums
+          retention-days: 30
+        if: always()
+
+      - name: Build release body
+        if: github.event.inputs.release_type != 'none'
+        id: release_body
+        env:
+          RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
+        run: |
+          {
+            printf '%s\n' "$RELEASE_NOTES"
+          } > /tmp/release_body.md
+          {
+            echo "body<<EOF"
+            cat /tmp/release_body.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        if: github.event.inputs.release_type != 'none'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ format('{0}-{1}-{2}', steps.version.outputs.date, steps.version.outputs.time, steps.version.outputs.repo_commit) }}
+          name: ${{ format('{0} - XR1710G Build ({1})', steps.version.outputs.date, steps.version.outputs.repo_commit) }}
+          body: ${{ steps.release_body.outputs.body }}
+          draft: false
+          prerelease: ${{ github.event.inputs.release_type == 'prerelease' }}
+          files: |
+            bin/targets/airoha/an7581/*.itb
+            bin/targets/airoha/an7581/config.buildinfo
+            bin/targets/airoha/an7581/feeds.buildinfo
+            bin/targets/airoha/an7581/version.buildinfo
+            bin/targets/airoha/an7581/sha256sums
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

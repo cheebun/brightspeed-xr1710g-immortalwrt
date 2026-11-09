@@ -1,0 +1,12 @@
+diff --git a/modules/luci-base/root/etc/config/luci b/modules/luci-base/root/etc/config/luci
+index 35fdbaa..f76df83 100644
+--- a/modules/luci-base/root/etc/config/luci
++++ b/modules/luci-base/root/etc/config/luci
+@@ -1,6 +1,6 @@
+ config core 'main'
+ 	option lang 'auto'
+-	option mediaurlbase '/luci-static/bootstrap'
++	option mediaurlbase '/luci-static/argon'
+ 	option resourcebase '/luci-static/resources'
+ 	option ubuspath '/ubus/'
+ 	option pollinterval '5'

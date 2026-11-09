@@ -1,0 +1,23 @@
+diff --git a/net/smartdns/patches/900-smartdns-default-port-6053.patch b/net/smartdns/patches/900-smartdns-default-port-6053.patch
+new file mode 100644
+index 00000000..759636ac
+--- /dev/null
++++ b/net/smartdns/patches/900-smartdns-default-port-6053.patch
+@@ -0,0 +1,17 @@
++From: xr1710g <xr1710g@local>
++Subject: [PATCH] openwrt: listen on 6053 and leave dnsmasq alone by default
++
++Keep SmartDNS off port 53 (dnsmasq keeps it) and do not hook it into
++dnsmasq unless enabled in LuCI. The service itself stays disabled.
++
++---
++--- a/package/openwrt/files/etc/config/smartdns
+++++ b/package/openwrt/files/etc/config/smartdns
++@@ -1,4 +1,6 @@
++ config 'smartdns'
++ 	option 'enabled' '0'
+++	option 'port' '6053'
+++	option 'auto_set_dnsmasq' '0'
++ 	
++ config 'domain-rule'
++\ No newline at end of file
