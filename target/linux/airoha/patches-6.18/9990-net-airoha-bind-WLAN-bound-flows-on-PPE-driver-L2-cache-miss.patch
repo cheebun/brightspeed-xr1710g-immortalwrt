@@ -47,6 +47,7 @@ Assisted-by: Codex:gpt-5.5
 Signed-off-by: Jihong Min <hurryman2212@gmail.com>
 Assisted-by: Codex:gpt-5.6-sol
 Signed-off-by: Yanghan Ye <yyh94306@gmail.com>
+Signed-off-by: naoki66 <naoki66@qq.com>
 ---
 --- a/drivers/net/ethernet/airoha/airoha_ppe.c
 +++ b/drivers/net/ethernet/airoha/airoha_ppe.c
@@ -57,7 +58,7 @@ Signed-off-by: Yanghan Ye <yyh94306@gmail.com>
  #include <linux/ipv6.h>
  #include <linux/of_platform.h>
  #include <linux/platform_device.h>
-@@ -708,65 +708,234 @@
+@@ -708,65 +708,236 @@
  }
  
  static int
@@ -149,10 +150,12 @@ Signed-off-by: Yanghan Ye <yyh94306@gmail.com>
 +					  struct airoha_flow_data *data,
 +					  struct airoha_foe_entry *hwe)
 +{
++	struct airoha_gdm_dev *egress_dev;
 +	int err;
 +
 +	err = airoha_ppe_foe_entry_prepare(ppe->eth, hwe, dev,
-+					   PPE_PKT_TYPE_BRIDGE, data, 0, 0);
++					   PPE_PKT_TYPE_BRIDGE, data, 0, 0,
++					   &egress_dev);
 +	if (err)
 +		return false;
 +
@@ -321,7 +324,7 @@ Signed-off-by: Yanghan Ye <yyh94306@gmail.com>
  		goto unlock;
 +	if (local)
 +		goto unlock;
-@@ -917,5 +1088,7 @@ static void airoha_ppe_foe_insert_entry(
+@@ -917,2 +1088,4 @@ static void airoha_ppe_foe_insert_entry(
  	if (e)
  		airoha_ppe_foe_commit_subflow_entry(ppe, e, hash, rx_wlan);
 +	else if (bridge_ready)

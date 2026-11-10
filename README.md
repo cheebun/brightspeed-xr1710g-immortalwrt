@@ -52,7 +52,7 @@ SmartDNS、chrony 对时、relayd 无线中继。
 - 用户名：**root**
 - 密码：*无*
 
-首次启动的无线网络名称为 `OpenWRT`（2.4GHz、5GHz、6GHz 三个频段同名），初始密码为 `password`。
+首次启动的无线网络名称为 `Brightspeed-XR1710G`（2.4GHz、5GHz、6GHz 三个频段同名），初始密码为 `password`。
 
 2.4GHz 使用 WPA2，5GHz 使用 WPA2/WPA3 混合模式，6GHz 使用 WPA3。
 

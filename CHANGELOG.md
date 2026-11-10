@@ -3,6 +3,27 @@
 本文件记录 Gemtek Brightspeed 固件仓库的重要功能、稳定性和维护变更。常规的
 ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或运行行为的内容。
 
+## 2026-11-10
+
+### 同步 naoki66 上游（仅 XR1710G 相关）
+
+- 合并 `naoki66/ImmortalWrt-for-Gemtek-brightspeed` 至 `a6dce40a`，只取内核、
+  airoha 平台、mt76、hostapd/wifi-scripts 与构建修复；XG2010G、Nokia 040、
+  PON、语音驱动以及作者的 CI、文档和 feed 调整不引入。
+- 内核补丁换成作者新版：PCS（621/624/629/630/745）、PCIe PERST 顺序（914）、
+  RX ring 补充（929）、PPE 卸载（9995/9996）与流统计容错（9999-14/15），
+  `675-0x` bridge flowtable 系列按 706-01 backport 重做。
+- 作者的 9995/9996 依赖 PON 补丁（920-17、920-20、922、925），本仓库不带这几个
+  补丁，新增 `9999-16-net-airoha-drop-pon-paths-from-ppe-offload.patch` 去掉
+  PON 专用代码（GEM 映射、PPPoE 重定向到 PON 口、xPON 组播兼容层），保留
+  QinQ/VPM、老化、丢弃原因统计和 debugfs。补丁序列在 6.18.60 上逐字节验证。
+- 跟随作者取消 AN7581 CPU 调频：内核关闭 `CPU_FREQ`，删除 0401/0402 直接
+  PLL 补丁与 `11-xr1710g-cpufreq-defaults`，`1710.config` 不再选择
+  `cpufreq`，CPU 保持启动固件设置的频率。
+- 删除 firewall4 的 bridge flowtable 补丁与 `50-fw4-bridge-reload`：内核没有
+  bridge flowtable 后端，`table bridge fw4` 永远为空。
+- 默认无线名称改为 `Brightspeed-XR1710G`（三频同名，初始密码不变）。
+
 ## 2026-10-08
 
 ### 同步 ImmortalWrt 上游至 6.18.54

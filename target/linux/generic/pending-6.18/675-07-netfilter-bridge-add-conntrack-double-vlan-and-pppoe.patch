@@ -22,15 +22,14 @@ Based on commit bf8ce0c0bf10 from ericwoud/bpir-nftflow-nf-next-20260707.
 
 Signed-off-by: Eric Woudstra <ericwouds@gmail.com>
 Signed-off-by: Bohdan Chubuk <chbgdn@gmail.com>
+Signed-off-by: naoki66 <naoki66@qq.com>
 ---
  include/linux/netfilter_bridge.h           |   6 +
  net/bridge/netfilter/nf_conntrack_bridge.c | 203 ++++++++++++++++++---
  2 files changed, 182 insertions(+), 27 deletions(-)
 
-Index: linux-6.18.60/include/linux/netfilter_bridge.h
-===================================================================
---- linux-6.18.60.orig/include/linux/netfilter_bridge.h
-+++ linux-6.18.60/include/linux/netfilter_bridge.h
+--- a/include/linux/netfilter_bridge.h
++++ b/include/linux/netfilter_bridge.h
 @@ -10,6 +10,12 @@ struct nf_bridge_frag_data {
  	bool    vlan_present;
  	u16     vlan_tci;
@@ -44,10 +43,8 @@ Index: linux-6.18.60/include/linux/netfilter_bridge.h
  };
  
  #if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
-Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
-===================================================================
---- linux-6.18.60.orig/net/bridge/netfilter/nf_conntrack_bridge.c
-+++ linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
+--- a/net/bridge/netfilter/nf_conntrack_bridge.c
++++ b/net/bridge/netfilter/nf_conntrack_bridge.c
 @@ -16,6 +16,7 @@
  #include <net/netfilter/nf_conntrack_helper.h>
  #include <net/netfilter/nf_conntrack_bridge.h>
@@ -56,7 +53,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  #include <linux/netfilter/nf_tables.h>
  #include <net/netfilter/nf_tables.h>
  
-@@ -147,7 +148,8 @@ static void br_skb_cb_restore(struct sk_
+@@ -143,7 +144,8 @@ static void br_skb_cb_restore(struct sk_
  }
  
  static unsigned int nf_ct_br_defrag4(struct sk_buff *skb,
@@ -66,7 +63,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  {
  	u16 zone_id = NF_CT_DEFAULT_ZONE_ID;
  	enum ip_conntrack_info ctinfo;
-@@ -158,6 +160,9 @@ static unsigned int nf_ct_br_defrag4(str
+@@ -154,6 +156,9 @@ static unsigned int nf_ct_br_defrag4(str
  	if (!ip_is_fragment(ip_hdr(skb)))
  		return NF_ACCEPT;
  
@@ -76,7 +73,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  	ct = nf_ct_get(skb, &ctinfo);
  	if (ct)
  		zone_id = nf_ct_zone_id(nf_ct_zone(ct), CTINFO2DIR(ctinfo));
-@@ -170,6 +175,8 @@ static unsigned int nf_ct_br_defrag4(str
+@@ -166,6 +171,8 @@ static unsigned int nf_ct_br_defrag4(str
  	if (!err) {
  		br_skb_cb_restore(skb, &cb, IPCB(skb)->frag_max_size);
  		skb->ignore_df = 1;
@@ -85,7 +82,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  		return NF_ACCEPT;
  	}
  
-@@ -177,7 +184,8 @@ static unsigned int nf_ct_br_defrag4(str
+@@ -173,7 +180,8 @@ static unsigned int nf_ct_br_defrag4(str
  }
  
  static unsigned int nf_ct_br_defrag6(struct sk_buff *skb,
@@ -95,7 +92,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  {
  #if IS_ENABLED(CONFIG_NF_DEFRAG_IPV6)
  	u16 zone_id = NF_CT_DEFAULT_ZONE_ID;
-@@ -186,6 +194,9 @@ static unsigned int nf_ct_br_defrag6(str
+@@ -182,6 +190,9 @@ static unsigned int nf_ct_br_defrag6(str
  	const struct nf_conn *ct;
  	int err;
  
@@ -105,7 +102,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  	ct = nf_ct_get(skb, &ctinfo);
  	if (ct)
  		zone_id = nf_ct_zone_id(nf_ct_zone(ct), CTINFO2DIR(ctinfo));
-@@ -199,7 +210,12 @@ static unsigned int nf_ct_br_defrag6(str
+@@ -195,7 +206,12 @@ static unsigned int nf_ct_br_defrag6(str
  		return NF_STOLEN;
  
  	br_skb_cb_restore(skb, &cb, IP6CB(skb)->frag_max_size);
@@ -119,7 +116,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  #else
  	return NF_ACCEPT;
  #endif
-@@ -241,59 +257,140 @@ static int nf_ct_br_ipv6_check(const str
+@@ -237,59 +253,140 @@ static int nf_ct_br_ipv6_check(const str
  	return 0;
  }
  
@@ -279,7 +276,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  }
  
  static unsigned int nf_ct_bridge_in(void *priv, struct sk_buff *skb,
-@@ -346,12 +443,22 @@ nf_ct_bridge_refrag(struct sk_buff *skb,
+@@ -342,12 +439,22 @@ nf_ct_bridge_refrag(struct sk_buff *skb,
  				  struct sk_buff *))
  {
  	struct nf_bridge_frag_data data;
@@ -303,7 +300,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  	case htons(ETH_P_IP):
  		nf_br_ip_fragment(state->net, state->sk, skb, &data, output);
  		break;
-@@ -372,11 +479,49 @@ static int nf_ct_bridge_frag_restore(str
+@@ -368,11 +475,49 @@ static int nf_ct_bridge_frag_restore(str
  {
  	int err;
  
@@ -357,7 +354,7 @@ Index: linux-6.18.60/net/bridge/netfilter/nf_conntrack_bridge.c
  	if (data->vlan_present)
  		__vlan_hwaccel_put_tag(skb, data->vlan_proto, data->vlan_tci);
  	else if (skb_vlan_tag_present(skb))
-@@ -386,6 +531,10 @@ static int nf_ct_bridge_frag_restore(str
+@@ -382,6 +527,10 @@ static int nf_ct_bridge_frag_restore(str
  	skb_reset_mac_header(skb);
  
  	return 0;

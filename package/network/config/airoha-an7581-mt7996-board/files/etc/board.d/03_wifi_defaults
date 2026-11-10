@@ -15,7 +15,12 @@ board=$(board_name)
 
 case "$board" in
 gemtek,xr1710g|\
-gemtek,xr1710g-ubi|\
+gemtek,xr1710g-ubi)
+	ucidef_set_country 'US'
+	ucidef_set_wireless 2g 'Brightspeed-XR1710G' 'psk2' 'password'
+	ucidef_set_wireless 5g 'Brightspeed-XR1710G' 'sae-mixed' 'password'
+	ucidef_set_wireless 6g 'Brightspeed-XR1710G' 'sae' 'password'
+	;;
 gemtek,w1700k-ubi)
 	ucidef_set_country 'US'
 	ucidef_set_wireless 2g 'OpenWRT' 'psk2' 'password'

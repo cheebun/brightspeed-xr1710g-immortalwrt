@@ -59,3 +59,5 @@ key-build*
 !/package/boot/arm-trusted-firmware-microchipsw/src/keys/soc-fw.pem
 !/package/boot/arm-trusted-firmware-microchipsw/src/keys/tos-fw.pem
 !/package/boot/arm-trusted-firmware-microchipsw/src/keys/trusted-world.pem
+# Temp files left by scripts/set-build-version.sh if interrupted
+*.config.version.*
