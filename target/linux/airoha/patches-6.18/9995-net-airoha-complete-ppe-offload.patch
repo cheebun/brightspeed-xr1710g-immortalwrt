@@ -29,10 +29,10 @@ Signed-off-by: naoki66 <naoki66@qq.com>
   drivers/net/ethernet/airoha/airoha_regs.h     |   2 +
   4 files changed, 724 insertions(+), 14 deletions(-)
 
-diff --git a/drivers/net/ethernet/airoha/airoha_eth.h b/drivers/net/ethernet/airoha/airoha_eth.h
-index 4b32654..a985e47 100644
---- a/drivers/net/ethernet/airoha/airoha_eth.h
-+++ b/drivers/net/ethernet/airoha/airoha_eth.h
+Index: linux-6.18.60/drivers/net/ethernet/airoha/airoha_eth.h
+===================================================================
+--- linux-6.18.60.orig/drivers/net/ethernet/airoha/airoha_eth.h
++++ linux-6.18.60/drivers/net/ethernet/airoha/airoha_eth.h
 @@ -549,6 +549,22 @@ enum airoha_flow_entry_type {
  	FLOW_TYPE_L2_SUBFLOW,
  };
@@ -65,10 +65,10 @@ index 4b32654..a985e47 100644
  	struct dentry *debugfs_dir;
  };
  
-diff --git a/drivers/net/ethernet/airoha/airoha_ppe.c b/drivers/net/ethernet/airoha/airoha_ppe.c
-index 05d7be0..660ddc5 100644
---- a/drivers/net/ethernet/airoha/airoha_ppe.c
-+++ b/drivers/net/ethernet/airoha/airoha_ppe.c
+Index: linux-6.18.60/drivers/net/ethernet/airoha/airoha_ppe.c
+===================================================================
+--- linux-6.18.60.orig/drivers/net/ethernet/airoha/airoha_ppe.c
++++ linux-6.18.60/drivers/net/ethernet/airoha/airoha_ppe.c
 @@ -24,6 +24,21 @@
  DEFINE_MUTEX(flow_offload_mutex);
  static DEFINE_SPINLOCK(ppe_lock);
@@ -91,7 +91,7 @@ index 05d7be0..660ddc5 100644
  static const struct rhashtable_params airoha_flow_table_params = {
  	.head_offset = offsetof(struct airoha_flow_table_entry, node),
  	.key_offset = offsetof(struct airoha_flow_table_entry, cookie),
-@@ -140,6 +155,7 @@ void airoha_ppe_set_xmit_frame_size(struct airoha_gdm_dev *dev)
+@@ -140,6 +155,7 @@ void airoha_ppe_set_xmit_frame_size(stru
  static void airoha_ppe_hw_init(struct airoha_ppe *ppe)
  {
  	u32 sram_ppe_num_data_entries = PPE_SRAM_NUM_ENTRIES, sram_num_entries;
@@ -99,7 +99,7 @@ index 05d7be0..660ddc5 100644
  	u32 sram_tb_size, dram_num_entries;
  	struct airoha_eth *eth = ppe->eth;
  	int i, sram_num_stats_entries;
-@@ -182,12 +198,31 @@ static void airoha_ppe_hw_init(struct airoha_ppe *ppe)
+@@ -182,12 +198,31 @@ static void airoha_ppe_hw_init(struct ai
  			      FIELD_PREP(PPE_SRAM_HASH1_MODE_MASK, 1) |
  			      FIELD_PREP(PPE_DRAM_HASH1_MODE_MASK, 3));
  
@@ -131,7 +131,7 @@ index 05d7be0..660ddc5 100644
  			      FIELD_PREP(PPE_TB_CFG_SEARCH_MISS_MASK, 3) |
  			      FIELD_PREP(PPE_TB_ENTRY_SIZE_MASK, 0) |
  			      FIELD_PREP(PPE_SRAM_TB_NUM_ENTRY_MASK,
-@@ -195,11 +230,28 @@ static void airoha_ppe_hw_init(struct airoha_ppe *ppe)
+@@ -195,11 +230,28 @@ static void airoha_ppe_hw_init(struct ai
  			      FIELD_PREP(PPE_DRAM_TB_NUM_ENTRY_MASK,
  					 dram_num_entries));
  
@@ -162,7 +162,7 @@ index 05d7be0..660ddc5 100644
  
  		airoha_fe_wr(eth, REG_PPE_HASH_SEED(i), PPE_HASH_SEED);
  		airoha_fe_clear(eth, REG_PPE_PPE_FLOW_CFG(i),
-@@ -321,6 +373,15 @@ static int airoha_ppe_get_wdma_info(struct net_device *dev, const u8 *addr,
+@@ -321,6 +373,15 @@ static int airoha_ppe_get_wdma_info(stru
  	return 0;
  }
  
@@ -178,7 +178,7 @@ index 05d7be0..660ddc5 100644
  static int airoha_get_dsa_port(struct net_device **dev)
  {
  #if IS_ENABLED(CONFIG_NET_DSA)
-@@ -345,6 +406,102 @@ static void airoha_ppe_foe_set_bridge_addrs(struct airoha_foe_bridge *br,
+@@ -345,6 +406,102 @@ static void airoha_ppe_foe_set_bridge_ad
  	br->src_mac_lo = get_unaligned_be32(eh->h_source + 2);
  }
  
@@ -281,7 +281,7 @@ index 05d7be0..660ddc5 100644
  static int airoha_ppe_foe_entry_prepare(struct airoha_eth *eth,
  					struct airoha_foe_entry *hwe,
  					struct net_device *netdev, int type,
-@@ -362,7 +519,7 @@ static int airoha_ppe_foe_entry_prepare(struct airoha_eth *eth,
+@@ -362,7 +519,7 @@ static int airoha_ppe_foe_entry_prepare(
  	      FIELD_PREP(AIROHA_FOE_IB1_BIND_PACKET_TYPE, type) |
  	      FIELD_PREP(AIROHA_FOE_IB1_BIND_UDP, l4proto == IPPROTO_UDP) |
  	      FIELD_PREP(AIROHA_FOE_IB1_BIND_VLAN_LAYER, data->vlan.num) |
@@ -290,7 +290,7 @@ index 05d7be0..660ddc5 100644
  	      FIELD_PREP(AIROHA_FOE_IB1_BIND_PPPOE, data->pppoe.num) |
  	      AIROHA_FOE_IB1_BIND_TTL;
  	hwe->ib1 = val;
-@@ -834,6 +991,288 @@ static int airoha_ppe_foe_commit_entry(struct airoha_ppe *ppe,
+@@ -834,6 +991,288 @@ unlock:
  	return err;
  }
  
@@ -579,7 +579,7 @@ index 05d7be0..660ddc5 100644
  static void airoha_ppe_foe_remove_flow(struct airoha_ppe *ppe,
  				       struct airoha_flow_table_entry *e)
  {
-@@ -1367,8 +1806,10 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1367,8 +1806,10 @@ static int airoha_ppe_flow_offload_repla
  			      airoha_flow_table_params))
  		return -EEXIST;
  
@@ -591,7 +591,7 @@ index 05d7be0..660ddc5 100644
  
  	if (flow_rule_match_key(rule, FLOW_DISSECTOR_KEY_CONTROL)) {
  		struct flow_match_control match;
-@@ -1376,9 +1817,13 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1376,9 +1817,13 @@ static int airoha_ppe_flow_offload_repla
  		flow_rule_match_control(rule, &match);
  		addr_type = match.key->addr_type;
  		if (flow_rule_has_control_flags(match.mask->flags,
@@ -606,7 +606,7 @@ index 05d7be0..660ddc5 100644
  		return -EOPNOTSUPP;
  	}
  
-@@ -1388,6 +1833,7 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1388,6 +1833,7 @@ static int airoha_ppe_flow_offload_repla
  		flow_rule_match_basic(rule, &match);
  		l4proto = match.key->ip_proto;
  	} else {
@@ -614,7 +614,7 @@ index 05d7be0..660ddc5 100644
  		return -EOPNOTSUPP;
  	}
  
-@@ -1408,6 +1854,7 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1408,6 +1854,7 @@ static int airoha_ppe_flow_offload_repla
  			memcpy(data.eth.h_dest, match.key->dst, ETH_ALEN);
  			memcpy(data.eth.h_source, match.key->src, ETH_ALEN);
  		} else {
@@ -622,7 +622,7 @@ index 05d7be0..660ddc5 100644
  			return -EOPNOTSUPP;
  		}
  		break;
-@@ -1418,14 +1865,18 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1418,14 +1865,18 @@ static int airoha_ppe_flow_offload_repla
  		offload_type = PPE_PKT_TYPE_IPV6_ROUTE_5T;
  		break;
  	default:
@@ -642,7 +642,7 @@ index 05d7be0..660ddc5 100644
  
  			if (act->mangle.htype == FLOW_ACT_MANGLE_HDR_TYPE_ETH)
  				airoha_ppe_flow_mangle_eth(act, &data.eth);
-@@ -1437,9 +1888,17 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1437,9 +1888,17 @@ static int airoha_ppe_flow_offload_repla
  		case FLOW_ACTION_CSUM:
  			break;
  		case FLOW_ACTION_VLAN_PUSH:
@@ -661,7 +661,7 @@ index 05d7be0..660ddc5 100644
  
  			data.vlan.hdr[data.vlan.num].id = act->vlan.vid;
  			data.vlan.hdr[data.vlan.num].proto = act->vlan.proto;
-@@ -1448,36 +1907,58 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1448,36 +1907,58 @@ static int airoha_ppe_flow_offload_repla
  		case FLOW_ACTION_VLAN_POP:
  			break;
  		case FLOW_ACTION_PPPOE_PUSH:
@@ -725,7 +725,7 @@ index 05d7be0..660ddc5 100644
  		return -EOPNOTSUPP;
  	}
  
-@@ -1504,8 +1985,10 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1504,8 +1985,10 @@ static int airoha_ppe_flow_offload_repla
  		if (act->id != FLOW_ACTION_MANGLE)
  			continue;
  
@@ -737,7 +737,7 @@ index 05d7be0..660ddc5 100644
  
  		switch (act->mangle.htype) {
  		case FLOW_ACT_MANGLE_HDR_TYPE_TCP:
-@@ -1519,11 +2002,14 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1519,11 +2002,14 @@ static int airoha_ppe_flow_offload_repla
  			/* handled earlier */
  			break;
  		default:
@@ -753,10 +753,10 @@ index 05d7be0..660ddc5 100644
  	}
  
  	if (addr_type == FLOW_DISSECTOR_KEY_IPV4_ADDRS) {
-diff --git a/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c b/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
-index 59ee5f6..cff0c16 100644
---- a/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
-+++ b/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
+Index: linux-6.18.60/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
+===================================================================
+--- linux-6.18.60.orig/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
++++ linux-6.18.60/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
 @@ -4,6 +4,9 @@
   * Author: Lorenzo Bianconi <lorenzo@kernel.org>
   */
@@ -767,7 +767,7 @@ index 59ee5f6..cff0c16 100644
  #include "airoha_eth.h"
  
  static void airoha_debugfs_ppe_print_tuple(struct seq_file *m,
-@@ -185,13 +188,214 @@ static int airoha_ppe_debugfs_foe_bind_show(struct seq_file *m, void *private)
+@@ -185,13 +188,214 @@ static int airoha_ppe_debugfs_foe_bind_s
  }
  DEFINE_SHOW_ATTRIBUTE(airoha_ppe_debugfs_foe_bind);
  
@@ -800,7 +800,7 @@ index 59ee5f6..cff0c16 100644
 +		seq_printf(m, "ppe%u_table_cfg: %08x\n", i,
 +			   airoha_fe_rr(eth, REG_PPE_TB_CFG(i)));
 +		seq_printf(m, "ppe%u_gdm2_default_cpu_port: %u\n", i,
-+			   FIELD_GET(DFT_CPORT_MASK(AIROHA_GDM2_IDX), cport));
++			   (u32)FIELD_GET(DFT_CPORT_MASK(AIROHA_GDM2_IDX), cport));
 +	}
 +
 +	return 0;
@@ -908,8 +908,8 @@ index 59ee5f6..cff0c16 100644
 +		u32 rate = airoha_fe_rr(eth, REG_PPE_BIND_RATE(i));
 +
 +		seq_printf(m, "ppe%u: l2b=%u l3=%u\n", i,
-+			   FIELD_GET(PPE_BIND_RATE_L2B_BIND_MASK, rate),
-+			   FIELD_GET(PPE_BIND_RATE_BIND_MASK, rate));
++			   (u32)FIELD_GET(PPE_BIND_RATE_L2B_BIND_MASK, rate),
++			   (u32)FIELD_GET(PPE_BIND_RATE_BIND_MASK, rate));
 +	}
 +
 +	return 0;
@@ -982,10 +982,10 @@ index 59ee5f6..cff0c16 100644
  
  	return 0;
  }
-diff --git a/drivers/net/ethernet/airoha/airoha_regs.h b/drivers/net/ethernet/airoha/airoha_regs.h
-index 94d53d4..97bfc5e 100644
---- a/drivers/net/ethernet/airoha/airoha_regs.h
-+++ b/drivers/net/ethernet/airoha/airoha_regs.h
+Index: linux-6.18.60/drivers/net/ethernet/airoha/airoha_regs.h
+===================================================================
+--- linux-6.18.60.orig/drivers/net/ethernet/airoha/airoha_regs.h
++++ linux-6.18.60/drivers/net/ethernet/airoha/airoha_regs.h
 @@ -286,6 +286,8 @@
  
  #define REG_PPE_TB_CFG(_n)			(((_n) ? PPE2_BASE : PPE1_BASE) + 0x21c)

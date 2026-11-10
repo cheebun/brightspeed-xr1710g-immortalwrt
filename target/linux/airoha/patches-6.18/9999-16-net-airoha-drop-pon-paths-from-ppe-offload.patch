@@ -25,10 +25,10 @@ state are kept unchanged.
   .../net/ethernet/airoha/airoha_ppe_debugfs.c  |   2 -
   4 files changed, 5 insertions(+), 484 deletions(-)
 
-diff --git a/drivers/net/ethernet/airoha/airoha_eth.c b/drivers/net/ethernet/airoha/airoha_eth.c
-index 63b9421..b8f6b09 100644
---- a/drivers/net/ethernet/airoha/airoha_eth.c
-+++ b/drivers/net/ethernet/airoha/airoha_eth.c
+Index: linux-6.18.60/drivers/net/ethernet/airoha/airoha_eth.c
+===================================================================
+--- linux-6.18.60.orig/drivers/net/ethernet/airoha/airoha_eth.c
++++ linux-6.18.60/drivers/net/ethernet/airoha/airoha_eth.c
 @@ -3,7 +3,6 @@
   * Copyright (c) 2024 AIROHA Inc
   * Author: Lorenzo Bianconi <lorenzo@kernel.org>
@@ -37,10 +37,12 @@ index 63b9421..b8f6b09 100644
  #include <linux/debugfs.h>
  #include <linux/seq_file.h>
  #include <linux/of.h>
-@@ -26,21 +25,6 @@
- static const struct net_device_ops airoha_netdev_ops;
- static struct dentry *airoha_eth_dbgfs_dir;
+@@ -24,22 +23,6 @@
+ #include "airoha_eth.h"
  
+ static const struct net_device_ops airoha_netdev_ops;
+-static struct dentry *airoha_eth_dbgfs_dir;
+-
 -#ifdef CONFIG_AIROHA_PON_COMPAT
 -#define AIROHA_PON_FE_BASE		0x1fb50000
 -#define AIROHA_PON_FE_SIZE		0x00002600
@@ -55,11 +57,10 @@ index 63b9421..b8f6b09 100644
 -static phys_addr_t airoha_pon_qdma_wan_buffer_base;
 -static phys_addr_t airoha_pon_ppe_buffer_base;
 -#endif
--
+ 
  u32 airoha_rr(void __iomem *base, u32 offset)
  {
- 	return readl(base + offset);
-@@ -4250,25 +4234,6 @@ static int airoha_probe(struct platform_device *pdev)
+@@ -4250,25 +4233,6 @@ static int airoha_probe(struct platform_
  		return dev_err_probe(eth->dev, PTR_ERR(eth->fe_regs),
  				     "failed to iomap fe regs\n");
  
@@ -85,7 +86,7 @@ index 63b9421..b8f6b09 100644
  	eth->rsts[0].id = "fe";
  	eth->rsts[1].id = "pdma";
  	eth->rsts[2].id = "qdma";
-@@ -4380,13 +4345,6 @@ static void airoha_remove(struct platform_device *pdev)
+@@ -4380,13 +4344,6 @@ static void airoha_remove(struct platfor
  	struct airoha_eth *eth = platform_get_drvdata(pdev);
  	int i;
  
@@ -99,10 +100,10 @@ index 63b9421..b8f6b09 100644
  	for (i = 0; i < ARRAY_SIZE(eth->qdma); i++) {
  		airoha_qdma_stop_napi(&eth->qdma[i]);
  		airoha_qdma_tx_cleanup(&eth->qdma[i]);
-diff --git a/drivers/net/ethernet/airoha/airoha_eth.h b/drivers/net/ethernet/airoha/airoha_eth.h
-index 42dea0b..ace7b64 100644
---- a/drivers/net/ethernet/airoha/airoha_eth.h
-+++ b/drivers/net/ethernet/airoha/airoha_eth.h
+Index: linux-6.18.60/drivers/net/ethernet/airoha/airoha_eth.h
+===================================================================
+--- linux-6.18.60.orig/drivers/net/ethernet/airoha/airoha_eth.h
++++ linux-6.18.60/drivers/net/ethernet/airoha/airoha_eth.h
 @@ -560,8 +560,6 @@ enum airoha_ppe_drop_reason {
  	AIROHA_PPE_DROP_PPPOE_ACTION,
  	AIROHA_PPE_DROP_PORTS,
@@ -112,10 +113,10 @@ index 42dea0b..ace7b64 100644
  	AIROHA_PPE_DROP_WDMA,
  	__AIROHA_PPE_DROP_MAX,
  };
-diff --git a/drivers/net/ethernet/airoha/airoha_ppe.c b/drivers/net/ethernet/airoha/airoha_ppe.c
-index 916c457..16b79dc 100644
---- a/drivers/net/ethernet/airoha/airoha_ppe.c
-+++ b/drivers/net/ethernet/airoha/airoha_ppe.c
+Index: linux-6.18.60/drivers/net/ethernet/airoha/airoha_ppe.c
+===================================================================
+--- linux-6.18.60.orig/drivers/net/ethernet/airoha/airoha_ppe.c
++++ linux-6.18.60/drivers/net/ethernet/airoha/airoha_ppe.c
 @@ -4,9 +4,6 @@
   * Author: Lorenzo Bianconi <lorenzo@kernel.org>
   */
@@ -126,7 +127,7 @@ index 916c457..16b79dc 100644
  #include <linux/if_vlan.h>
  #include <linux/ip.h>
  #include <linux/etherdevice.h>
-@@ -410,91 +407,6 @@ static void airoha_ppe_foe_set_bridge_addrs(struct airoha_foe_bridge *br,
+@@ -410,91 +407,6 @@ static void airoha_ppe_foe_set_bridge_ad
  	br->src_mac_lo = get_unaligned_be32(eh->h_source + 2);
  }
  
@@ -218,7 +219,7 @@ index 916c457..16b79dc 100644
  /* IB1 VPM selects the TPID used for the outer tag the PPE inserts:
   * 1 -> 0x8100, 2 -> 0x88a8.
   */
-@@ -1005,288 +917,6 @@ static int airoha_ppe_foe_commit_entry(struct airoha_ppe *ppe,
+@@ -1005,288 +917,6 @@ unlock:
  	return err;
  }
  
@@ -507,7 +508,7 @@ index 916c457..16b79dc 100644
  static void airoha_ppe_foe_remove_flow(struct airoha_ppe *ppe,
  				       struct airoha_flow_table_entry *e)
  {
-@@ -1413,12 +1043,10 @@ airoha_ppe_foe_prepare_bridge_subflow_dev(struct airoha_ppe *ppe,
+@@ -1413,12 +1043,10 @@ airoha_ppe_foe_prepare_bridge_subflow_de
  					  struct airoha_flow_data *data,
  					  struct airoha_foe_entry *hwe)
  {
@@ -521,7 +522,7 @@ index 916c457..16b79dc 100644
  	if (err)
  		return false;
  
-@@ -1803,40 +1431,6 @@ static int airoha_ppe_entry_idle_time(struct airoha_ppe *ppe,
+@@ -1803,40 +1431,6 @@ static int airoha_ppe_entry_idle_time(st
  	return airoha_ppe_get_entry_idle_time(ppe, e->data.ib1);
  }
  
@@ -562,7 +563,7 @@ index 916c457..16b79dc 100644
  static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
  					   struct flow_cls_offload *f)
  {
-@@ -1976,44 +1570,17 @@ static int airoha_ppe_flow_offload_replace(struct airoha_eth *eth,
+@@ -1976,44 +1570,17 @@ static int airoha_ppe_flow_offload_repla
  		return -EINVAL;
  	}
  
@@ -611,11 +612,11 @@ index 916c457..16b79dc 100644
  
  	if (flow_rule_match_key(rule, FLOW_DISSECTOR_KEY_PORTS)) {
  		struct flow_match_ports ports;
-diff --git a/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c b/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
-index b3a26c5..fb292be 100644
---- a/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
-+++ b/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
-@@ -265,8 +265,6 @@ static int airoha_ppe_debugfs_summary_show(struct seq_file *m, void *private)
+Index: linux-6.18.60/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
+===================================================================
+--- linux-6.18.60.orig/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
++++ linux-6.18.60/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
+@@ -265,8 +265,6 @@ static int airoha_ppe_debugfs_summary_sh
  		[AIROHA_PPE_DROP_PPPOE_ACTION] = "pppoe_action",
  		[AIROHA_PPE_DROP_PORTS] = "ports",
  		[AIROHA_PPE_DROP_INVALID_MAC] = "invalid_mac",
