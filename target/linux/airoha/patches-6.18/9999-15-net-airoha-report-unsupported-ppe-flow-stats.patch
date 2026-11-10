@@ -20,7 +20,15 @@ firmware simply has no support for the mailbox command.
 
 Signed-off-by: liujixings <liujixings@outlook.com>
 Signed-off-by: naoki66 <naoki66@qq.com>
+[xr1710g: define airoha_ppe_flow_stats_available() ahead of its first
+ user, airoha_ppe_debugfs_foe_show(); it was used before declaration.]
 ---
+  drivers/net/ethernet/airoha/airoha_npu.c      |  2 +-
+  .../net/ethernet/airoha/airoha_ppe_debugfs.c  | 43 ++++++++++++++++---
+  2 files changed, 38 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/ethernet/airoha/airoha_npu.c b/drivers/net/ethernet/airoha/airoha_npu.c
+index 3e6a0a7..d25d8cc 100644
 --- a/drivers/net/ethernet/airoha/airoha_npu.c
 +++ b/drivers/net/ethernet/airoha/airoha_npu.c
 @@ -741,7 +741,7 @@ static int airoha_npu_debugfs_info(struct seq_file *m, void *data)
@@ -32,30 +40,13 @@ Signed-off-by: naoki66 <naoki66@qq.com>
  
  	for (i = 0; i < ARRAY_SIZE(npu->cores); i++) {
  		u32 val[3];
+diff --git a/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c b/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
+index 3e60430..2a9acb8 100644
 --- a/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
 +++ b/drivers/net/ethernet/airoha/airoha_ppe_debugfs.c
-@@ -167,11 +167,14 @@ static int airoha_ppe_debugfs_foe_show(struct seq_file *m, void *private,
- 		*((__be32 *)h_source) = cpu_to_be32(l2->src_mac_hi);
- 
- 		seq_printf(m, " eth=%pM->%pM etype=%04x data=%08x"
--			      " vlan=%d,%d ib1=%08x ib2=%08x"
--			      " packets=%llu bytes=%llu\n",
-+			      " vlan=%d,%d ib1=%08x ib2=%08x",
- 			   h_source, h_dest, l2->etype, data,
--			   l2->vlan1, l2->vlan2, hwe->ib1, ib2,
--			   stats.packets, stats.bytes);
-+			   l2->vlan1, l2->vlan2, hwe->ib1, ib2);
-+		if (airoha_ppe_flow_stats_available(ppe))
-+			seq_printf(m, " packets=%llu bytes=%llu\n",
-+				   stats.packets, stats.bytes);
-+		else
-+			seq_puts(m, " packets=n/a bytes=n/a\n");
- 	}
- 
- 	return 0;
-@@ -225,6 +228,23 @@ static int airoha_ppe_debugfs_config_show(struct seq_file *m, void *private)
+@@ -37,6 +37,23 @@ static void airoha_debugfs_ppe_print_tuple(struct seq_file *m,
+ 		seq_printf(m, ":%d", *dest_port);
  }
- DEFINE_SHOW_ATTRIBUTE(airoha_ppe_debugfs_config);
  
 +/* The per-entry counters live in a DMA region the NPU fills while it
 + * forwards a flow. Without a mapped stats window nothing ever updates
@@ -74,10 +65,29 @@ Signed-off-by: naoki66 <naoki66@qq.com>
 +	return available;
 +}
 +
- static int airoha_ppe_debugfs_summary_show(struct seq_file *m, void *private)
+ static int airoha_ppe_debugfs_foe_show(struct seq_file *m, void *private,
+ 				       bool bind)
  {
- 	static const char *const ppe_type_str[] = {
-@@ -256,11 +276,16 @@ static int airoha_ppe_debugfs_summary_show(struct seq_file *m, void *private)
+@@ -166,11 +183,14 @@ static int airoha_ppe_debugfs_foe_show(struct seq_file *m, void *private,
+ 		*((__be32 *)h_source) = cpu_to_be32(l2->src_mac_hi);
+ 
+ 		seq_printf(m, " eth=%pM->%pM etype=%04x data=%08x"
+-			      " vlan=%d,%d ib1=%08x ib2=%08x"
+-			      " packets=%llu bytes=%llu\n",
++			      " vlan=%d,%d ib1=%08x ib2=%08x",
+ 			   h_source, h_dest, l2->etype, data,
+-			   l2->vlan1, l2->vlan2, hwe->ib1, ib2,
+-			   stats.packets, stats.bytes);
++			   l2->vlan1, l2->vlan2, hwe->ib1, ib2);
++		if (airoha_ppe_flow_stats_available(ppe))
++			seq_printf(m, " packets=%llu bytes=%llu\n",
++				   stats.packets, stats.bytes);
++		else
++			seq_puts(m, " packets=n/a bytes=n/a\n");
+ 	}
+ 
+ 	return 0;
+@@ -255,11 +275,16 @@ static int airoha_ppe_debugfs_summary_show(struct seq_file *m, void *private)
  	u32 entry_bound[ARRAY_SIZE(ppe_type_str)] = {};
  	struct airoha_ppe *ppe = m->private;
  	struct airoha_eth *eth = ppe->eth;
@@ -96,7 +106,7 @@ Signed-off-by: naoki66 <naoki66@qq.com>
  	total = airoha_ppe_get_total_num_entries(ppe);
  	for (i = 0; i < total; i++) {
  		struct airoha_foe_stats64 stats = {};
-@@ -294,6 +319,12 @@ static int airoha_ppe_debugfs_summary_show(struct seq_file *m, void *private)
+@@ -293,6 +318,12 @@ static int airoha_ppe_debugfs_summary_show(struct seq_file *m, void *private)
  	for (i = 0; i < ARRAY_SIZE(ppe_type_str); i++) {
  		if (!ppe_type_str[i])
  			continue;
