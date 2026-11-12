@@ -3,6 +3,23 @@
 本文件记录 Gemtek Brightspeed 固件仓库的重要功能、稳定性和维护变更。常规的
 ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或运行行为的内容。
 
+## 2026-11-12
+
+### 同步 naoki66 上游至 `eadbae0f`
+
+- NPU 一致性内存池：AN7581 的 NPU 只能访问 DRAM 前 1 GiB。新增 16 MiB 的
+  `npu_dma` 保留区（`0x84a00000`），并加入 928-01/02，让 mt76 交给 NPU 的
+  描述符环和 HW-RRO 缓冲固定从这段内存分配。NPU 固件区改名为 `firmware`，
+  驱动按索引查找，不受影响。
+- mt76（`PKG_RELEASE` 3→4）：NPU RX ring 修复（126）、mt7996 `reg_lock`
+  改用 irqsave 防止 AP 模式 panic（127）、整芯片复位与 L1 SER 恢复后重新
+  初始化 NPU（128/129）、probe 期间跳过 MCU 复位（132）、复位前先
+  `pci_clear_master` 并在关机时静默设备（133）、`GET_MIB_INFO` 超时改为
+  5 秒（134）。
+- PCIe PHY：IDAC 粗调跳过 0 值，与原厂搜索方式一致，并打印锁定结果（929-03）。
+- 作者对 `kmod-crypto-hw-airoha-eip93` 的改动未引入：本仓库用的是
+  `kmod-crypto-hw-eip93`，`crypto.mk` 里已经设置了相同的 AES/GCM 软件回退阈值。
+
 ## 2026-11-10
 
 ### 同步 naoki66 上游（仅 XR1710G 相关）
