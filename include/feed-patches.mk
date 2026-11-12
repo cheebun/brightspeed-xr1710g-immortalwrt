@@ -17,9 +17,11 @@
 #     once -- when staging_dir/host/.prereq-build is first created -- so a feed
 #     refresh would slip straight past it.
 #
-# The script is idempotent (an already-patched feed reports "already applied"
-# and is skipped), so the steady-state cost is one `git apply --check` per
-# patch file.
+# The script is idempotent: it computes the expected content of every touched
+# file from the feed's HEAD plus all patches, and only rewrites files that
+# differ, so an already-patched feed is left untouched (no mtime changes, no
+# needless package rebuilds). The steady-state cost is one scratch-index
+# `git apply --cached` per patch file.
 #
 # A feed that has not been fetched yet is skipped with a warning, not an error:
 # this target runs *before* prepare-tmpinfo's own recipe, which is what creates

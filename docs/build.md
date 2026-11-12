@@ -27,7 +27,7 @@ bash scripts/fix-stale-golang-host.sh
 FEED_PATCHES_STRICT=1 bash scripts/apply-feed-patches.sh
 ```
 
-`apply-feed-patches.sh` 是幂等的：已应用的补丁会被跳过。若上游变化导致补丁不匹配，构建会停止；先核对本次 feeds 提交，再调整补丁，不应静默跳过。需要长期维护的 feed 改动请保存为 `patches/feeds/` 下的补丁，不要只改下载目录。
+`apply-feed-patches.sh` 是幂等的：它以 feed 的 `HEAD` 为起点，按顺序叠加该 feed 的全部补丁，算出每个文件应有的内容，只改写内容不一致的文件；已经是正确内容的文件不会被改动，也不会触发重新编译。补丁涉及的文件由脚本接管，在 `feeds/` 里对这些文件的手工修改会被覆盖。若上游变化导致补丁不匹配（或两个补丁重复修改同一处），构建会停止；先核对本次 feeds 提交，再调整补丁，不应静默跳过。需要长期维护的 feed 改动请保存为 `patches/feeds/` 下的补丁，不要只改下载目录。修改脚本后运行 `bash scripts/test-apply-feed-patches.sh`。
 
 ## 2. 生成配置
 

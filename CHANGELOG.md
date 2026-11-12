@@ -5,6 +5,20 @@ ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或�
 
 ## 2026-11-12
 
+### dawn 与 feed 补丁
+
+- packages feed 的 DAWN 更新到 2026-11-11，已原生支持 6 GHz（UCI 节 `802_11ax`），
+  原来的 6 GHz 源码补丁打不上，dawn 编译失败。现在只保留 `dawn.config` 部分，
+  以上游节名 `802_11ax` 提供 6 GHz 参数，数值与原来相同。
+- `apply-feed-patches.sh` 改为按内容判断：以 feed 的 `HEAD` 为起点叠加全部补丁，
+  算出期望内容，只改写不一致的文件。原来先 `--check` 再 `--reverse --check` 的
+  判断有两种误判：末尾追加、且追加内容和上下文结尾相同的补丁（新的 dawn 补丁）
+  每次 `make` 都会再追加一遍；纯删除补丁在全新 feed 上会被误认为已打过。
+  被重复追加的工作区会在下次构建时自动修复。新增
+  `scripts/test-apply-feed-patches.sh`，CI 在打补丁前先运行。
+- 删除重复的 `python3/100-build-depend-libffi.patch`，与 11-10 同步带入的
+  `100-build-depend-on-libffi.patch` 内容完全相同。
+
 ### 同步 naoki66 上游至 `eadbae0f`
 
 - NPU 一致性内存池：AN7581 的 NPU 只能访问 DRAM 前 1 GiB。新增 16 MiB 的

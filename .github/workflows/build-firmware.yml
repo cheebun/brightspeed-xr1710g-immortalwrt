@@ -61,7 +61,9 @@ jobs:
           bash scripts/fix-stale-golang-host.sh
 
       - name: Apply feed patches
-        run: FEED_PATCHES_STRICT=1 bash scripts/apply-feed-patches.sh
+        run: |
+          bash scripts/test-apply-feed-patches.sh
+          FEED_PATCHES_STRICT=1 bash scripts/apply-feed-patches.sh
 
       - name: Configure
         run: |
