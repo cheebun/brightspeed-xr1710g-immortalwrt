@@ -19,7 +19,9 @@ observability of the QDMA and NPU blocks:
 Signed-off-by: liujixings <liujixings@outlook.com>
 Signed-off-by: naoki66 <naoki66@qq.com>
 [xr1710g: rebased without the PON patches 920-17, 920-20, 922 and 925;
- PON-only hunks are removed again by 9999-16.]
+ PON-only hunks are removed again by 9999-16. The airoha_npu.c debugfs
+ hunk is refreshed on top of 928-01, which adds airoha_npu_rmem_release()
+ at the same spot; without this it only applied with fuzz 2.]
 ---
   drivers/net/ethernet/airoha/airoha_eth.c      | 113 ++++++++++++++++++
   drivers/net/ethernet/airoha/airoha_eth.h      |   1 +
@@ -229,10 +231,10 @@ index 82c1998..3e6a0a7 100644
  
  	return ret;
  }
-@@ -723,6 +729,45 @@ static const struct regmap_config regmap_config = {
- 	.disable_locking	= true,
- };
- 
+@@ -728,6 +734,45 @@ static void airoha_npu_rmem_release(void *data)
+ 	of_reserved_mem_device_release(data);
+ }
+
 +static int airoha_npu_debugfs_info(struct seq_file *m, void *data)
 +{
 +	struct airoha_npu *npu = m->private;
