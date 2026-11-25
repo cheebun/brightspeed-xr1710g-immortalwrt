@@ -23,6 +23,17 @@ ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或�
   Argon/Glass/aps 未选；编译后检查每个设备 rootfs 含 Vantage 的样式、模板、
   `30_luci-theme-vantage`、`99-vantage` 与合法的菜单覆盖文件，且不含 Argon。
 
+### 移除 dawn 6 GHz 补丁
+
+- 删除 `patches/feeds/packages/net/dawn/100-dawn-6ghz-band.patch`。上游 DAWN
+  自 2026-11-11 起原生支持 6 GHz（频段 `DAWN_BAND_80211AX`，UCI 节 `802_11ax`），
+  早期补丁的 `802_11a_6g` 格式与之冲突，11-12 起剩下的 `dawn.config` 追加节也已无必要。
+- 现在直接使用 packages feed 的 dawn（`PKG_SOURCE_DATE` 2026-11-11，
+  `cf43b0f1`），其中包含 `168286e4`（拒绝缺少 rcpi/rsni/channel 的 beacon
+  report，修复空 beacon report 导致的段错误）。
+- 上游默认 `dawn.config` 没有 `802_11ax` 节，6 GHz 使用 DAWN 内置默认值：
+  `initial_score` 为 110（原补丁为 100），其余参数与原来相同。
+
 ## 2026-11-12
 
 ### dawn 与 feed 补丁
