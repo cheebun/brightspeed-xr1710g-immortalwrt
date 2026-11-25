@@ -5,6 +5,21 @@ ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或�
 
 ## 2026-11-25
 
+### distfeeds.list 改为注释未发布的 feed
+
+- 撤销 11-10 在 `include/feeds.mk` 中加入的 `DISTFEEDS_FEEDS` 白名单（及
+  `scripts/feeds` 中对应的帮助文字）。它直接删掉非白名单 feed 的行，并误把
+  下载服务器上不存在的 `video` 当作已发布。
+- 改用上游机制：新增 `scripts/distfeeds-config.sh`，为不在 `DISTFEEDS_HOSTED`
+  （默认 `packages luci routing telephony`）中的 feed 输出 `CONFIG_FEED_<name>=m`，
+  `include/feeds.mk` 会把这些 feed 写成 `# ` 开头的注释行。CI 在 `make defconfig`
+  后确认 `=m` 保留。
+- 配置合并改为 `scripts/merge-config-fragment.sh`：原 awk 只删除种子里清单键的
+  `=y`/`is not set` 取值，`=m` 等其他取值不会被覆盖。
+- 新增 `scripts/check-distfeeds.sh`：编译后探测每个设备 rootfs 的
+  `distfeeds.list`，未注释行返回 403/404/410 时构建失败，超时或 5xx 只警告；
+  注释行可访问时提示加入 `DISTFEEDS_HOSTED`。测试为 `scripts/test-distfeeds.sh`。
+
 ### 默认主题改为 Vantage
 
 - 新增 `vantage` feed（`anothaDev/luci-theme-vantage`，固定在 v1.2.0 提交

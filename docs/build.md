@@ -157,17 +157,15 @@ CONFIG_PACKAGE_luci-i18n-vantage-traffic-zh-cn=y
 # CONFIG_PACKAGE_luci-app-vantage-aps is not set
 EOF
 
+bash scripts/distfeeds-config.sh . >> /tmp/xr1710g-options.conf
+
 cp 1710.config .config
-
-awk '
-  NR==FNR { k=$0; sub(/^# /,"",k); sub(/( is not set|=y)$/,"",k); drop[k]=1; next }
-  { k=$0; sub(/^# /,"",k); sub(/(=.*| is not set)$/,"",k); if (k in drop) next; print }
-' /tmp/xr1710g-options.conf .config > .config.new && mv .config.new .config
-
-cat /tmp/xr1710g-options.conf >> .config
+bash scripts/merge-config-fragment.sh /tmp/xr1710g-options.conf .config
 
 make defconfig
 ```
+
+`distfeeds-config.sh` 为 ImmortalWrt 下载服务器上不存在的 feed（`app_airoha`、`vantage` 等第三方 feed）输出 `CONFIG_FEED_<name>=m`。上游 `include/feeds.mk` 仍为每个 feed 在 `/etc/apk/repositories.d/distfeeds.list` 写一行，`=m` 的行以 `# ` 注释，因此设备上的 `apk update` 不会请求 404 的索引；需要时可在设备上手动取消注释。默认视为已发布的 feed 由环境变量 `DISTFEEDS_HOSTED` 指定（`packages luci routing telephony`，`base` 总会写入）。`merge-config-fragment.sh` 先从 `.config` 删除清单中出现的键（任意取值或 `is not set`），再追加清单，同一键以清单中最后一次设定为准。CI 在 `make defconfig` 后确认这些 `=m` 未被丢弃，编译后用 `scripts/check-distfeeds.sh` 逐行探测每个设备 rootfs 的 `distfeeds.list`：未注释的行返回 403/404/410 即失败，注释行只在其实际可用时给出警告。修改这些脚本后运行 `bash scripts/test-distfeeds.sh`（需联网，`SKIP_NETWORK_TESTS=1` 跳过探测用例）。
 
 主题相关选项选择 Vantage（来自 [`feeds.conf.default`](../feeds.conf.default) 中固定提交的 `vantage` feed）及其 zh-cn 翻译，关闭 Argon 与 Glass。仓库根目录的 [`files/`](../files) 由构建系统直接覆盖到每个镜像，其中 `99-vantage` 在首次启动时选用 Vantage 主题。
 

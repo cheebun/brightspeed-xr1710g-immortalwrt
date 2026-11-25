@@ -91,6 +91,7 @@ SmartDNS、chrony 对时、relayd 无线中继、Vantage 主题（含仪表盘�
 - 管理地址 `192.168.50.1`；IPv6 使用 SLAAC，关闭 DHCPv6 与 RA DNS。
 - 默认开启软件与硬件 flow offload；VLAN、PPPoE 透传和 AP 模式卸载可在 NPU 页面按需启用。
 - 三频默认启用：2.4GHz EHT20 信道 1，5GHz EHT80 信道 36，6GHz EHT160 信道 37。
+- 软件源：`/etc/apk/repositories.d/distfeeds.list` 只启用 ImmortalWrt 下载服务器实际发布的 feed（base、packages、luci、routing、telephony）；编译进固件的第三方 feed（`app_airoha`、`vantage` 等）以注释行保留，`apk update` 不会因 404 失败。详见[本地构建](docs/build.md#2-生成配置)。
 - 默认主题 Vantage（首次启动由 `files/etc/uci-defaults/99-vantage` 设定，外观默认浅色、品牌位显示主机名，只补充未设置的选项）；SmartDNS 默认关闭，端口 6053，不接管 dnsmasq；时间同步由 chrony 负责。
 
 ### 预装 LuCI 应用
