@@ -15,7 +15,7 @@
 
 **新增应用**
 
-SmartDNS、chrony 对时、relayd 无线中继。
+SmartDNS、chrony 对时、relayd 无线中继、Vantage 主题（含仪表盘与按设备流量统计）。
 
 **新增内核模块**
 
@@ -36,6 +36,7 @@ SmartDNS、chrony 对时、relayd 无线中继。
 - 动态域名与内网穿透：DDNS、DDNS-Go、Lucky、ZeroTier。
 - 推送与杂项：WeChatPush、PushBot、vlmcsd。
 - 时间同步：busybox ntpd、sysntpd。
+- 主题：Argon、Glass（由 Vantage 取代，Bootstrap 保留为备用主题）。
 
 ## 支持的分区布局
 
@@ -90,7 +91,7 @@ SmartDNS、chrony 对时、relayd 无线中继。
 - 管理地址 `192.168.50.1`；IPv6 使用 SLAAC，关闭 DHCPv6 与 RA DNS。
 - 默认开启软件与硬件 flow offload；VLAN、PPPoE 透传和 AP 模式卸载可在 NPU 页面按需启用。
 - 三频默认启用：2.4GHz EHT20 信道 1，5GHz EHT80 信道 36，6GHz EHT160 信道 37。
-- 默认主题 Argon；SmartDNS 默认关闭，端口 6053，不接管 dnsmasq；时间同步由 chrony 负责。
+- 默认主题 Vantage（首次启动由 `files/etc/uci-defaults/99-vantage` 设定，外观默认浅色、品牌位显示主机名，只补充未设置的选项）；SmartDNS 默认关闭，端口 6053，不接管 dnsmasq；时间同步由 chrony 负责。
 
 ### 预装 LuCI 应用
 
@@ -99,6 +100,7 @@ SmartDNS、chrony 对时、relayd 无线中继。
 | 设备 | NPU 状态与加速 `luci-app-airoha-npu`、风扇控制 `luci-app-airoha-fancontrol`、网络模式 `luci-app-netmode` |
 | 网络 | 防火墙 `luci-app-firewall`、UPnP `luci-app-upnp`、IP/MAC 绑定 `luci-app-arpbind`、Wi-Fi 7 多链路 `luci-app-mlo`、在线客户端 `luci-app-clients`、SmartDNS `luci-app-smartdns`、无线中继 `luci-proto-relay` |
 | 系统 | 包管理 `luci-app-package-manager`、Web 终端 `luci-app-ttyd`、定时重启 `luci-app-autoreboot`、网络唤醒 `luci-app-wol` / `luci-app-timewol`、Wi-Fi 定时开关 `luci-app-wifischedule`、网络看门狗 `luci-app-watchcat`、时间同步 `luci-app-chrony` |
+| 界面 | 主题 `luci-theme-vantage`、仪表盘 `luci-app-vantage`、按设备流量 `luci-app-vantage-traffic` |
 
 ### 主要系统包
 
@@ -134,7 +136,7 @@ SmartDNS、chrony 对时、relayd 无线中继。
 - `bash` / `coreutils` / `curl` / `ip-full` / `jq` / `yq` / `flock` / `mount-utils`
 - `ethtool-full` / `pciutils` / `uboot-envtools` / `arp-scan` / `socat`
 - `iperf3`（内置测速服务端/客户端）
-- `luci-theme-argon` + `luci-theme-bootstrap`
+- `luci-theme-vantage` + `luci-app-vantage` + `luci-app-vantage-traffic`（含 zh-cn 翻译）+ `luci-theme-bootstrap`
 - `default-settings-chn`（中文默认设置）
 
 **代理与网络核心**
@@ -159,6 +161,7 @@ SmartDNS、chrony 对时、relayd 无线中继。
 ### LuCI 应用来源
 - [naoki66/luci-app-airoha](https://github.com/naoki66/luci-app-airoha) - Airoha LuCI 应用 feed，包含 `luci-app-airoha-npu`
 - [Gilly1970/Gemtek-W1700K](https://github.com/Gilly1970/Gemtek-W1700K) - Airoha 风扇控制与 FlowSense（commit db3f1c8）
+- [anothaDev/luci-theme-vantage](https://github.com/anothaDev/luci-theme-vantage) - Vantage 主题、仪表盘与流量插件（v1.2.0，GPL-3.0-or-later）
 
 ## 许可证
 

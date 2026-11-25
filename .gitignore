@@ -13,7 +13,6 @@
 /logs
 /feeds
 /feeds.conf
-/files
 /target/linux/feeds
 /overlay
 /package/feeds
@@ -40,6 +39,8 @@ git-src
 .codex-run*
 
 # --- XR1710G project rules ---
+# /files is tracked: it is the buildroot's rootfs overlay (package/Makefile and
+# include/image.mk copy it over every image), used for the LuCI theme defaults.
 /output/
 /.ccache/
 /.sccache/

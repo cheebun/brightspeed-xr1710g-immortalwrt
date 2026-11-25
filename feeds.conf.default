@@ -14,6 +14,7 @@ src-git app_airoha https://github.com/naoki66/luci-app-airoha.git
 src-git openwrt_bandix https://github.com/timsaya/openwrt-bandix.git;main
 src-git luci_app_bandix https://github.com/timsaya/luci-app-bandix.git;main
 src-git helloworld https://github.com/fw876/helloworld.git;dev
+src-git vantage https://github.com/anothaDev/luci-theme-vantage.git^a7ff63b715bca51effb5ab2d488dfff6cff1b16a
 #src-git --directory=luci-app-pushbot pushbot https://github.com/naoki66/luci-app-pushbot.git
 #src-git uniwrt https://github.com/ox1d3x3/uniwrt-luci.git;main
 #src-git mosdns https://github.com/sbwml/luci-app-mosdns.git;v5

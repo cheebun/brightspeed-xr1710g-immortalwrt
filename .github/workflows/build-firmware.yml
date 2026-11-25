@@ -179,6 +179,17 @@ jobs:
           CONFIG_PACKAGE_chrony=y
           CONFIG_PACKAGE_luci-app-chrony=y
           CONFIG_PACKAGE_luci-i18n-chrony-zh-cn=y
+          # CONFIG_PACKAGE_luci-theme-argon is not set
+          # CONFIG_PACKAGE_luci-app-argon-config is not set
+          # CONFIG_PACKAGE_luci-theme-glass is not set
+          CONFIG_PACKAGE_luci-theme-bootstrap=y
+          CONFIG_PACKAGE_luci-theme-vantage=y
+          CONFIG_PACKAGE_luci-i18n-vantage-theme-zh-cn=y
+          CONFIG_PACKAGE_luci-app-vantage=y
+          CONFIG_PACKAGE_luci-i18n-vantage-zh-cn=y
+          CONFIG_PACKAGE_luci-app-vantage-traffic=y
+          CONFIG_PACKAGE_luci-i18n-vantage-traffic-zh-cn=y
+          # CONFIG_PACKAGE_luci-app-vantage-aps is not set
           EOF
 
           awk '
@@ -194,6 +205,7 @@ jobs:
           bash scripts/set-build-version.sh .config
           make defconfig
           bash scripts/check-gemtek-profile-isolation.sh --config .config
+          bash scripts/check-luci-theme.sh --config .config
           grep -E 'CONFIG_(IMAGEOPT|EXTRA_IMAGE_NAME|VERSIONOPT|VERSION_DIST|VERSION_NUMBER|VERSION_CODE|VERSION_FILENAMES|VERSION_CODE_FILENAMES)[= ]' .config
 
       - name: Download sources
@@ -233,13 +245,16 @@ jobs:
           # rootfs; device packages live in each target-dir-<id> apk database.
           kdir=$(dirname "$(dirname "$kernel_config")")
           manifest_args=()
+          rootfs_args=()
           for db in "$kdir"/target-dir-*/lib/apk/db/installed; do
             [ -f "$db" ] || continue
-            rootfs_id=$(basename "$(dirname "$(dirname "$(dirname "$(dirname "$db")")")")")
+            rootfs_dir=$(dirname "$(dirname "$(dirname "$(dirname "$db")")")")
+            rootfs_id=$(basename "$rootfs_dir")
             manifest="$RUNNER_TEMP/${rootfs_id}.manifest"
             sed -n 's/^P://p' "$db" | sort > "$manifest"
             echo "$rootfs_id: $(wc -l < "$manifest") packages"
             manifest_args+=(--manifest "$manifest")
+            rootfs_args+=(--rootfs "$rootfs_dir")
           done
           if [ "${#manifest_args[@]}" -eq 0 ]; then
             echo "no per-device rootfs package database found under $kdir" >&2
@@ -249,6 +264,12 @@ jobs:
             --config .config \
             --kernel-config "$kernel_config" \
             "${manifest_args[@]}"
+          # Vantage theme files, 99-vantage and the menu override in every
+          # device rootfs; no Argon or Glass.
+          bash scripts/check-luci-theme.sh \
+            --config .config \
+            "${manifest_args[@]}" \
+            "${rootfs_args[@]}"
 
       - name: Rename firmware files
         shell: bash

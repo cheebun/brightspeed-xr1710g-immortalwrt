@@ -144,6 +144,17 @@ CONFIG_PACKAGE_luci-proto-relay=y
 CONFIG_PACKAGE_chrony=y
 CONFIG_PACKAGE_luci-app-chrony=y
 CONFIG_PACKAGE_luci-i18n-chrony-zh-cn=y
+# CONFIG_PACKAGE_luci-theme-argon is not set
+# CONFIG_PACKAGE_luci-app-argon-config is not set
+# CONFIG_PACKAGE_luci-theme-glass is not set
+CONFIG_PACKAGE_luci-theme-bootstrap=y
+CONFIG_PACKAGE_luci-theme-vantage=y
+CONFIG_PACKAGE_luci-i18n-vantage-theme-zh-cn=y
+CONFIG_PACKAGE_luci-app-vantage=y
+CONFIG_PACKAGE_luci-i18n-vantage-zh-cn=y
+CONFIG_PACKAGE_luci-app-vantage-traffic=y
+CONFIG_PACKAGE_luci-i18n-vantage-traffic-zh-cn=y
+# CONFIG_PACKAGE_luci-app-vantage-aps is not set
 EOF
 
 cp 1710.config .config
@@ -158,7 +169,9 @@ cat /tmp/xr1710g-options.conf >> .config
 make defconfig
 ```
 
-`make defconfig` 会按依赖补全其余选项。注意 `PREINITOPT` 必须开启，否则 `TARGET_PREINIT_*` 字符串没有提示项，`defconfig` 会把管理地址重置为 `192.168.1.1`。生成后请核对 `.config` 与最终镜像清单，不要仅凭选项断言某项已内置。
+主题相关选项选择 Vantage（来自 [`feeds.conf.default`](../feeds.conf.default) 中固定提交的 `vantage` feed）及其 zh-cn 翻译，关闭 Argon 与 Glass。仓库根目录的 [`files/`](../files) 由构建系统直接覆盖到每个镜像，其中 `99-vantage` 在首次启动时选用 Vantage 主题。
+
+`make defconfig` 会按依赖补全其余选项。注意 `PREINITOPT` 必须开启，否则 `TARGET_PREINIT_*` 字符串没有提示项，`defconfig` 会把管理地址重置为 `192.168.1.1`。生成后请核对 `.config` 与最终镜像清单，不要仅凭选项断言某项已内置；`bash scripts/check-luci-theme.sh --config .config` 检查主题选项。
 
 ## 3. 下载与编译
 

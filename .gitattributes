@@ -18,3 +18,6 @@ package/lucky/** text eol=lf
 package/luci-app-netmode/** text eol=lf
 package/luci-app-mesh-conf/** text eol=lf
 package/luci-app-airoha/** text eol=lf
+
+# Rootfs overlay scripts run by /bin/sh on the router
+files/etc/uci-defaults/** text eol=lf

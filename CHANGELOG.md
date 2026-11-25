@@ -3,6 +3,26 @@
 本文件记录 Gemtek Brightspeed 固件仓库的重要功能、稳定性和维护变更。常规的
 ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或运行行为的内容。
 
+## 2026-11-25
+
+### 默认主题改为 Vantage
+
+- 新增 `vantage` feed（`anothaDev/luci-theme-vantage`，固定在 v1.2.0 提交
+  `a7ff63b7`），预装 `luci-theme-vantage`、`luci-app-vantage`（仪表盘）、
+  `luci-app-vantage-traffic` 及其 zh-cn 翻译；`luci-theme-bootstrap` 保留为备用
+  主题。不选择 `luci-app-vantage-aps`。
+- 移除 Argon：删除 `100-default-theme-argon`（luci-base）与
+  `100-xr1710g-argon-defaults`（luci-theme-argon）两个 feed 补丁，
+  `luci-theme-argon`、`luci-app-argon-config` 不再选择。`luci-theme-glass`
+  的 feed 早已停用，配置中的 `=y` 一并关闭。
+- 仓库根目录的 `files/` 改为纳入版本管理（构建系统会把它覆盖到每个镜像）：
+  `etc/uci-defaults/99-vantage` 在主题存在时注册并选用 Vantage，并只在未设置时
+  写入外观默认值（浅色、品牌位显示主机名）；`usr/share/luci/menu.d/zz-landing-override.json`
+  把“状态”菜单的顺序设为 2。
+- 新增 `scripts/check-luci-theme.sh`：`make defconfig` 后检查主题相关包已选、
+  Argon/Glass/aps 未选；编译后检查每个设备 rootfs 含 Vantage 的样式、模板、
+  `30_luci-theme-vantage`、`99-vantage` 与合法的菜单覆盖文件，且不含 Argon。
+
 ## 2026-11-12
 
 ### dawn 与 feed 补丁
