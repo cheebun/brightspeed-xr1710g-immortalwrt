@@ -19,6 +19,7 @@ ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或�
 - 新增 `scripts/check-distfeeds.sh`：编译后探测每个设备 rootfs 的
   `distfeeds.list`，未注释行返回 403/404/410 时构建失败，超时或 5xx 只警告；
   注释行可访问时提示加入 `DISTFEEDS_HOSTED`。测试为 `scripts/test-distfeeds.sh`。
+- 编译失败后的详细重试不再拼出 `make package/package/...`。
 
 ### 默认主题改为 Vantage
 
