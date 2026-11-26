@@ -40,6 +40,19 @@ led_color_set() {
 	echo "${multi_intensity}" > "/sys/class/leds/${sysfs}/multi_intensity"
 }
 
+led_netdev_mode_reset() {
+	local sysfs="$1"
+	local mode
+
+	for mode in \
+		link link_10 link_100 link_1000 link_2500 link_5000 \
+		link_10000 \
+		half_duplex full_duplex tx rx tx_err rx_err; do
+		[ -e "/sys/class/leds/${sysfs}/${mode}" ] && \
+			echo 0 > "/sys/class/leds/${sysfs}/${mode}"
+	done
+}
+
 load_led() {
 	local name
 	local sysfs
@@ -130,17 +143,15 @@ load_led() {
 				# Attaching a device to a hardware controlled LED reads back
 				# the mode programmed into the PHY. Clear it first, the
 				# kernel refuses link_* while link is set and vice versa.
-				[ -n "$mode" ] && for m in link link_10 link_100 link_1000 \
-					link_2500 link_5000 link_10000 half_duplex full_duplex \
-					tx rx tx_err rx_err; do
-					[ -e "/sys/class/leds/${sysfs}/$m" ] && \
-						echo 0 > "/sys/class/leds/${sysfs}/$m"
-				done
+				[ -n "$mode" ] && led_netdev_mode_reset "$sysfs"
 				for m in $mode; do
 					[ -e "/sys/class/leds/${sysfs}/$m" ] && \
 						echo 1 > "/sys/class/leds/${sysfs}/$m"
 				done
-				echo $interval > "/sys/class/leds/${sysfs}/interval" 2>/dev/null
+				if [ ! -e "/sys/class/leds/${sysfs}/offloaded" ] ||
+				   [ "$(cat "/sys/class/leds/${sysfs}/offloaded")" != 1 ]; then
+					echo $interval > "/sys/class/leds/${sysfs}/interval" 2>/dev/null
+				fi
 			}
 			;;
 
