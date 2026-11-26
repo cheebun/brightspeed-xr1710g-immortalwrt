@@ -86,7 +86,7 @@ define Device/gemtek_w1700k-ubi
   DEVICE_COMPAT_MESSAGE := Partition table has been changed to cooperate \
        with the vendor bootloader with regard to the BMT/BBT partition at \
        the end of flash. A reinstall including corrected chainloader is needed.
-  DEVICE_PACKAGES := airoha-en7581-mt7996-npu-firmware fitblk \
+  DEVICE_PACKAGES := airoha-en7581-mt7996-npu-firmware airoha-an7581-mt7996-board fitblk \
 		    kmod-hwmon-nct7802 kmod-mt7996-firmware wpad-openssl \
 		    rtl826x-firmware rtl8261c-firmware
   UBINIZE_OPTS := -E 5
@@ -136,7 +136,6 @@ endef
 define Device/nokia_xg-040g-md
   $(call Device/nokia_xg-040g-md-common)
   DEVICE_DTS := an7581-nokia_xg-040g-md
-  DEVICE_DTS_CONFIG := config@1
   IMAGE_SIZE := 131968k
   KERNEL_SIZE := 8192k
   IMAGES += factory-kernel.bin factory-rootfs.bin
@@ -161,11 +160,84 @@ define Device/nokia_xg-040g-md-ubi
 	fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-static-with-rootfs | \
 	append-metadata
   DEVICE_PACKAGES += fitblk
-  ARTIFACT/bl31-uboot.fip := an7581-bl31-uboot nokia_xg-040g-md
-  ARTIFACT/preloader.bin := an7581-preloader nokia_xg-040g-md
-  ARTIFACTS := bl31-uboot.fip preloader.bin
 endef
 TARGET_DEVICES += nokia_xg-040g-md-ubi
+
+define Device/nokia_xg-040g-tf-common
+  $(call Device/nokia_xg-040g-md-common)
+  DEVICE_MODEL := XG-040G-TF
+  DEVICE_PACKAGES += -kmod-regulator-userspace-consumer \
+    -kmod-usb-ledtrig-usbport -kmod-usb3
+endef
+
+define Device/nokia_xg-040g-tf-ubi
+  $(call Device/nokia_xg-040g-tf-common)
+  DEVICE_VARIANT := (UBI)
+  DEVICE_DTS := an7581-nokia_xg-040g-tf-ubi
+  UBOOTENV_IN_UBI := 1
+  KERNEL_IN_UBI := 1
+  KERNEL := kernel-bin | gzip
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 128k
+  KERNEL_INITRAMFS_SUFFIX := -recovery.itb
+  IMAGES := sysupgrade.itb
+  IMAGE/sysupgrade.itb := append-kernel | \
+	fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-static-with-rootfs | \
+	append-metadata
+  DEVICE_PACKAGES += fitblk
+endef
+TARGET_DEVICES += nokia_xg-040g-tf-ubi
+
+define Device/gemtek_xr1710g-common
+  DEVICE_VENDOR := Gemtek
+  DEVICE_MODEL := XR1710G
+  # Retail branding only. Keep it out of DEVICE_ALT0_*: Device/Dump emits one
+  # Target Profile entry per ALT name on top of the primary one, so an alias
+  # here would print two menu lines for every XR1710G layout.
+  DEVICE_DESCRIPTION := Gemtek XR1710G, also sold as Brightspeed XR1710G
+  DEVICE_PACKAGES := airoha-en7581-mt7996-npu-firmware airoha-an7581-mt7996-board \
+		    kmod-nf-conntrack-bridge kmod-nft-bridge \
+		    fitblk uboot-envtools \
+		    kmod-hwmon-nct7802 kmod-mt7996-firmware wpad-mesh-mbedtls \
+		    rtl826x-firmware px5g-mbedtls
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  UBOOTENV_IN_UBI := 1
+  KERNEL_IN_UBI := 1
+  KERNEL := kernel-bin | gzip
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 128k
+  KERNEL_INITRAMFS_SUFFIX := -recovery.itb
+  IMAGES := sysupgrade.itb
+  IMAGE/sysupgrade.itb := append-kernel | fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-static-with-rootfs | append-metadata
+  SOC := an7581
+endef
+
+define Device/gemtek_xr1710g
+  # DEVICE_DTS must be set before the common block: the common IMAGE/KERNEL
+  # lines use := and freeze $(firstword $(DEVICE_DTS)) at eval time.
+  DEVICE_DTS := an7581-xr1710g
+  $(call Device/gemtek_xr1710g-common)
+  SUPPORTED_DEVICES := gemtek,xr1710g
+endef
+TARGET_DEVICES += gemtek_xr1710g
+
+define Device/gemtek_xr1710g-ubi
+  DEVICE_DTS := an7581-gemtek-xr1710g-ubi
+  $(call Device/gemtek_xr1710g-common)
+  # Layout goes into DEVICE_VARIANT (like nokia_xg-040g-md-ubi), not into
+  # DEVICE_MODEL: that keeps the title free of a "(...)" suffix and the menu
+  # list at one line per layout.
+  DEVICE_VARIANT := UBI
+  SUPPORTED_DEVICES := gemtek,xr1710g-ubi
+  DEVICE_COMPAT_VERSION := 2.0
+  DEVICE_COMPAT_MESSAGE := Firmware requires the XR1710G OpenWrt U-Boot UBI layout \
+       with bl2 at 0x00000000 and the UBI partition extending from \
+       0x00020000 to the end of NAND. Restore the complete 2 MiB stock DSD \
+       main-data image to the static factory volume before booting Linux.
+endef
+TARGET_DEVICES += gemtek_xr1710g-ubi
 
 define Device/quantum_q1000k-ubi
   DEVICE_VENDOR := Quantum Fiber

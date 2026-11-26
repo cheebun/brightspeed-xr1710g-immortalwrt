@@ -14,6 +14,11 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	chosen {
+		/* Create Fastmap on first full attach for later UBI map restoration. */
+		bootargs-append = " ubi.fm_autoconvert=1";
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -27,6 +32,20 @@
 		npu_binary: npu-binary@84000000 {
 			no-map;
 			reg = <0x0 0x84000000 0x0 0xa00000>;
+		};
+
+		/*
+		 * NPU V2 can only address the first 1 GiB of DRAM (0x80000000-0xbfffffff);
+		 * higher addresses alias the lower 1 GiB. Coherent buffers handed to the NPU
+		 * (mt76 RX/TX descriptor rings, HW-RRO ba_bitmap/addr_elem/msdu_pg/session
+		 * buffers, TXD buffers) must be allocated from here. Streaming mappings are
+		 * not affected. Size 16 MiB covers mt76 + mailbox (~10.7 MiB with MT7996).
+		 */
+		npu_dma: dma-pool@84a00000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x0 0x84a00000 0x0 0x1000000>;
+			alignment = <0x0 0x200000>;
 		};
 
 		qdma0_buf: qdma0-buf@87000000 {
@@ -45,6 +64,7 @@
 		method = "smc";
 	};
 
+	/* Keep the boot firmware CPU clock; no Linux CPU DVFS provider. */
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -73,56 +93,32 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x0>;
-			operating-points-v2 = <&cpu_opp_table>;
 			enable-method = "psci";
-			clocks = <&cpufreq>;
-			clock-names = "cpu";
-			power-domains = <&cpufreq>;
-			power-domain-names = "perf";
 			next-level-cache = <&l2>;
-			#cooling-cells = <2>;
 		};
 
 		cpu1: cpu@1 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x1>;
-			operating-points-v2 = <&cpu_opp_table>;
 			enable-method = "psci";
-			clocks = <&cpufreq>;
-			clock-names = "cpu";
-			power-domains = <&cpufreq>;
-			power-domain-names = "perf";
 			next-level-cache = <&l2>;
-			#cooling-cells = <2>;
 		};
 
 		cpu2: cpu@2 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x2>;
-			operating-points-v2 = <&cpu_opp_table>;
 			enable-method = "psci";
-			clocks = <&cpufreq>;
-			clock-names = "cpu";
-			power-domains = <&cpufreq>;
-			power-domain-names = "perf";
 			next-level-cache = <&l2>;
-			#cooling-cells = <2>;
 		};
 
 		cpu3: cpu@3 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x3>;
-			operating-points-v2 = <&cpu_opp_table>;
 			enable-method = "psci";
-			clocks = <&cpufreq>;
-			clock-names = "cpu";
-			power-domains = <&cpufreq>;
-			power-domain-names = "perf";
 			next-level-cache = <&l2>;
-			#cooling-cells = <2>;
 		};
 
 		l2: l2-cache {
@@ -131,159 +127,6 @@
 			cache-line-size = <64>;
 			cache-level = <2>;
 			cache-unified;
-		};
-	};
-
-	cpufreq: cpufreq {
-		compatible = "airoha,en7581-cpufreq";
-
-		operating-points-v2 = <&cpu_smcc_opp_table>;
-
-		#power-domain-cells = <0>;
-		#clock-cells = <0>;
-	};
-
-	cpu_opp_table: opp-table {
-		compatible = "operating-points-v2";
-		opp-shared;
-
-		opp-500000000 {
-			opp-hz = /bits/ 64 <500000000>;
-			required-opps = <&smcc_opp0>;
-		};
-
-		opp-550000000 {
-			opp-hz = /bits/ 64 <550000000>;
-			required-opps = <&smcc_opp1>;
-		};
-
-		opp-600000000 {
-			opp-hz = /bits/ 64 <600000000>;
-			required-opps = <&smcc_opp2>;
-		};
-
-		opp-650000000 {
-			opp-hz = /bits/ 64 <650000000>;
-			required-opps = <&smcc_opp3>;
-		};
-
-		opp-700000000 {
-			opp-hz = /bits/ 64 <700000000>;
-			required-opps = <&smcc_opp4>;
-		};
-
-		opp-750000000 {
-			opp-hz = /bits/ 64 <750000000>;
-			required-opps = <&smcc_opp5>;
-		};
-
-		opp-800000000 {
-			opp-hz = /bits/ 64 <800000000>;
-			required-opps = <&smcc_opp6>;
-		};
-
-		opp-850000000 {
-			opp-hz = /bits/ 64 <850000000>;
-			required-opps = <&smcc_opp7>;
-		};
-
-		opp-900000000 {
-			opp-hz = /bits/ 64 <900000000>;
-			required-opps = <&smcc_opp8>;
-		};
-
-		opp-950000000 {
-			opp-hz = /bits/ 64 <950000000>;
-			required-opps = <&smcc_opp9>;
-		};
-
-		opp-1000000000 {
-			opp-hz = /bits/ 64 <1000000000>;
-			required-opps = <&smcc_opp10>;
-		};
-
-		opp-1050000000 {
-			opp-hz = /bits/ 64 <1050000000>;
-			required-opps = <&smcc_opp11>;
-		};
-
-		opp-1100000000 {
-			opp-hz = /bits/ 64 <1100000000>;
-			required-opps = <&smcc_opp12>;
-		};
-
-		opp-1150000000 {
-			opp-hz = /bits/ 64 <1150000000>;
-			required-opps = <&smcc_opp13>;
-		};
-
-		opp-1200000000 {
-			opp-hz = /bits/ 64 <1200000000>;
-			required-opps = <&smcc_opp14>;
-		};
-	};
-
-	cpu_smcc_opp_table: opp-table-cpu-smcc {
-		compatible = "operating-points-v2";
-
-		smcc_opp0: opp0 {
-			opp-level = <0>;
-		};
-
-		smcc_opp1: opp1 {
-			opp-level = <1>;
-		};
-
-		smcc_opp2: opp2 {
-			opp-level = <2>;
-		};
-
-		smcc_opp3: opp3 {
-			opp-level = <3>;
-		};
-
-		smcc_opp4: opp4 {
-			opp-level = <4>;
-		};
-
-		smcc_opp5: opp5 {
-			opp-level = <5>;
-		};
-
-		smcc_opp6: opp6 {
-			opp-level = <6>;
-		};
-
-		smcc_opp7: opp7 {
-			opp-level = <7>;
-		};
-
-		smcc_opp8: opp8 {
-			opp-level = <8>;
-		};
-
-		smcc_opp9: opp9 {
-			opp-level = <9>;
-		};
-
-		smcc_opp10: opp10 {
-			opp-level = <10>;
-		};
-
-		smcc_opp11: opp11 {
-			opp-level = <11>;
-		};
-
-		smcc_opp12: opp12 {
-			opp-level = <12>;
-		};
-
-		smcc_opp13: opp13 {
-			opp-level = <13>;
-		};
-
-		smcc_opp14: opp14 {
-			opp-level = <14>;
 		};
 	};
 
@@ -317,15 +160,6 @@
 				};
 			};
 
-			cooling-maps {
-				map0 {
-					trip = <&cpu_hot>;
-					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-				};
-			};
 		};
 
 		/* Read-only zone; trips stay on the main sensor zone above */
@@ -423,7 +257,11 @@
 
 		afe: afe@1fbe2200 {
 			compatible = "airoha,an7581-afe";
-			reg = <0x0 0x1fbe2200 0x0 0x9000>;
+			#sound-dai-cells = <0>;
+			reg = <0x0 0x1fbe2200 0x0 0xfc>,
+			      <0x0 0x1fbe2e00 0x0 0x114>;
+			reg-names = "afe", "irq";
+			resets = <&scuclk EN7581_I2S_RST>;
 
 			interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
@@ -447,6 +285,26 @@
 			reg-shift = <2>;
 			interrupts = <GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <7372800>;
+
+			status = "disabled";
+		};
+
+		/* PON MAC owns TC/PLOAM/T-CONT/GEM while pon_pcs owns SerDes. */
+		xpon_mac: ethernet@1fb64000 {
+			compatible = "airoha,an7581-xpon-mac";
+			reg = <0x0 0x1fb64000 0x0 0x3e8>,
+			      <0x0 0x1fb65000 0x0 0xff8>,
+			      <0x0 0x1fb66000 0x0 0x1000>,
+			      <0x0 0x1faf0000 0x0 0x2000>;
+			reg-names = "gpon", "xgpon", "epon", "pon-phy";
+
+			interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "mac", "phy";
+
+			/* The PCS provider owns line rate, CDR, and PMA calibration. */
+			pcs-handle = <&pon_pcs>;
+			airoha,scu = <&scuclk>;
 
 			status = "disabled";
 		};
@@ -720,6 +578,36 @@
 			};
 		};
 
+		pnand: nand-controller@1fa11000 {
+			compatible = "airoha,en7581-nfc";
+			reg = <0x0 0x1fa11000 0x0 0x580>;
+
+			clocks = <&scuclk EN7523_CLK_SPI>;
+			clock-names = "nfi_clk";
+			ecc-engine = <&pnand_ecc>;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/*
+			 * SNFI and parallel NAND share the NFI registers and package pins.
+			 * Board DTS selects the matching pinmux and controller for the
+			 * active boot strap.
+			 */
+			status = "disabled";
+		};
+
+		pnand_ecc: ecc@1fa12000 {
+			compatible = "airoha,en7581-nand-ecc";
+			reg = <0x0 0x1fa12000 0x0 0x150>;
+
+			clocks = <&scuclk EN7523_CLK_SPI>;
+			clock-names = "nfiecc_clk";
+
+			/* The parallel NFI consumer acquires the ECC engine during attach. */
+			status = "disabled";
+		};
+
 		mmc0: mmc@1fa0e000 {
 			compatible = "mediatek,mt7622-mmc";
 			reg = <0x0 0x1fa0e000 0x0 0x1000>,
@@ -892,8 +780,8 @@
 				     <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>;
-			memory-region = <&npu_binary>;
-			memory-region-names = "binary";
+			memory-region = <&npu_binary>, <&npu_dma>;
+			memory-region-names = "firmware", "dma";
 
 			status = "disabled";
 		};
