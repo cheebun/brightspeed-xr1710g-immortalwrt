@@ -1,93 +1,169 @@
 <img src="https://avatars.githubusercontent.com/u/53193414?s=200&v=4" alt="logo" width="200" height="200" align="right">
 
-# Project ImmortalWrt
+# ImmortalWrt for Brightspeed XR1710G
 
-ImmortalWrt is a fork of [OpenWrt](https://openwrt.org), with more packages ported, more devices supported, default optimized profiles and localization modifications for mainland China users.<br/>
-Compared to upstream, we allow to use (non-upstreamable) modifications/hacks to provide better feature/performance/support.
+[![Upstream](https://img.shields.io/badge/upstream-immortalwrt%403e246256ce-blue)](https://github.com/immortalwrt/immortalwrt)
+[![Kernel](https://img.shields.io/badge/kernel-6.18.44-red)](https://www.kernel.org/)
+[![SoC](https://img.shields.io/badge/SoC-Airoha%20AN7581GT-orange)]()
+[![License](https://img.shields.io/badge/license-GPL--2.0-green)](https://spdx.org/licenses/GPL-2.0-only.html)
 
-Default login address: http://192.168.1.1 or http://immortalwrt.lan, username: __root__, password: _none_.
+基于 [ImmortalWrt](https://github.com/immortalwrt/immortalwrt) 与 [naoki66 的移植](https://github.com/naoki66/ImmortalWrt-for-Gemtek-brightspeed)，为 Brightspeed/Gemtek XR1710G 定制的固件。
 
-## Download
-Built firmware images are available for many architectures and come with a package selection to be used as WiFi home router. To quickly find a factory image usable to migrate from a vendor stock firmware to ImmortalWrt, try the *Firmware Selector*.
+项目的重要功能、稳定性和补丁维护记录见 [更新日志](CHANGELOG.md)。
 
-- [ImmortalWrt Firmware Selector](https://firmware-selector.immortalwrt.org/)
+## 在 naoki66 / ImmortalWrt 基础上增加的内容
 
-If your device is supported, please follow the **Info** link to see install instructions or consult the support resources listed below.
+**新增应用**
 
-## Development
-To build your own firmware you need a GNU/Linux, BSD or macOS system (case sensitive filesystem required). Cygwin is unsupported because of the lack of a case sensitive file system.<br/>
+SmartDNS、chrony 对时、relayd 无线中继、Vantage 主题（含仪表盘与按设备流量统计）。
 
-  ### Requirements
-  To build with this project, Debian 11 is preferred. And you need use the CPU based on AMD64 architecture, with at least 4GB RAM and 25 GB available disk space. Make sure the __Internet__ is accessible.
+**新增内核模块**
 
-  The following tools are needed to compile ImmortalWrt, the package names vary between distributions.
+`kmod-veth`、`kmod-nft-queue`、`kmod-nfnetlink-queue`、`kmod-xdp-sockets-diag`。
 
-  - Here is an example for Debian/Ubuntu users:<br/>
-    - Method 1:
-      <details>
-        <summary>Setup dependencies via APT</summary>
+**新增软件包**
 
-        ```bash
-        sudo apt update -y
-        sudo apt full-upgrade -y
-        sudo apt install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
-          bzip2 ccache clang cmake cpio curl device-tree-compiler ecj fastjar flex gawk gettext gcc-multilib \
-          g++-multilib git gnutls-dev gperf haveged help2man intltool lib32gcc-s1 libc6-dev-i386 libelf-dev \
-          libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libpython3-dev \
-          libreadline-dev libssl-dev libtool libyaml-dev libz-dev lld llvm lrzsz mkisofs msmtp nano \
-          ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply python3-docutils \
-          python3-pyelftools qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo uglifyjs \
-          upx-ucl unzip vim wget xmlto xxd zlib1g-dev zstd
-        ```
-      </details>
-    - Method 2:
-      ```bash
-      sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-      ```
+`mount-utils`（完整版 `mount`、`umount`、`findmnt` 等挂载工具）。
 
-  Note:
-  - Do everything as an unprivileged user, not root, without sudo.
-  - Using CPUs based on other architectures should be fine to compile ImmortalWrt, but more hacks are needed - No warranty at all.
-  - You must __not__ have spaces or non-ascii characters in PATH or in the work folders on the drive.
-  - If you're using Windows Subsystem for Linux (or WSL), removing Windows folders from PATH is required, please see [Build system setup WSL](https://openwrt.org/docs/guide-developer/build-system/wsl) documentation.
-  - Using macOS as the host build OS is __not__ recommended. No warranty at all. You can get tips from [Build system setup macOS](https://openwrt.org/docs/guide-developer/build-system/buildroot.exigence.macosx) documentation.
-  - For more details, please see [Build system setup](https://openwrt.org/docs/guide-developer/build-system/install-buildsystem) documentation.
+**内核与编译选项**
 
-  ### Quickstart
-  1. Run `git clone -b <branch> --single-branch --filter=blob:none https://github.com/immortalwrt/immortalwrt` to clone the source code.
-  2. Run `cd immortalwrt` to enter source directory.
-  3. Run `./scripts/feeds update -a` to obtain all the latest package definitions defined in feeds.conf / feeds.conf.default
-  4. Run `./scripts/feeds install -a` to install symlinks for all obtained packages into package/feeds/
-  5. Run `make menuconfig` to select your preferred configuration for the toolchain, target system & firmware packages.
-  6. Run `make` to build your firmware. This will download all sources, build the cross-compile toolchain and then cross-compile the GNU/Linux kernel & all chosen applications for your target system.
+- 内核 BTF 调试信息。
+- 内核 netkit。
+- OpenSSL 内置 devcrypto 引擎。
 
-  ### Related Repositories
-  The main repository uses multiple sub-repositories to manage packages of different categories. All packages are installed via the OpenWrt package manager called opkg. If you're looking to develop the web interface or port packages to ImmortalWrt, please find the fitting repository below.
-  - [LuCI Web Interface](https://github.com/immortalwrt/luci): Modern and modular interface to control the device via a web browser.
-  - [ImmortalWrt Packages](https://github.com/immortalwrt/packages): Community repository of ported packages.
-  - [OpenWrt Routing](https://github.com/openwrt/routing): Packages specifically focused on (mesh) routing.
-  - [OpenWrt Video](https://github.com/openwrt/video): Packages specifically focused on display servers and clients (Xorg and Wayland).
+**相对 naoki66 移除的内容**
 
-## Support Information
-For a list of supported devices see the [OpenWrt Hardware Database](https://openwrt.org/supported_devices)
-  ### Documentation
-  - [Quick Start Guide](https://openwrt.org/docs/guide-quick-start/start)
-  - [User Guide](https://openwrt.org/docs/guide-user/start)
-  - [Developer Documentation](https://openwrt.org/docs/guide-developer/start)
-  - [Technical Reference](https://openwrt.org/docs/techref/start)
+- 动态域名与内网穿透：DDNS、DDNS-Go、Lucky、ZeroTier。
+- 推送与杂项：WeChatPush、PushBot、vlmcsd。
+- 时间同步：busybox ntpd、sysntpd。
+- 主题：Argon、Glass（由 Vantage 取代，Bootstrap 保留为备用主题）。
 
-  ### Support Community
-  - Support Chat: group [@ctcgfw_openwrt_discuss](https://t.me/ctcgfw_openwrt_discuss) on [Telegram](https://telegram.org/).
-  - Support Chat: group [#immortalwrt](https://matrix.to/#/#immortalwrt:matrix.org) on [Matrix](https://matrix.org/).
+## 支持的分区布局
 
-## License
-ImmortalWrt is licensed under [GPL-2.0-only](https://spdx.org/licenses/GPL-2.0-only.html).
+`1710.config` 一次编译出两个镜像，分别对应两种分区布局，不能互刷。刷写前请按[升级注意事项](docs/firmware-release.md#升级注意事项)确认设备当前的布局。
 
-## Acknowledgements
-<table>
-  <tr>
-    <td><a href="https://dlercloud.com/"><img src="https://user-images.githubusercontent.com/22235437/111103249-f9ec6e00-8588-11eb-9bfc-67cc55574555.png" width="183" height="52" border="0" alt="Dler Cloud"></a></td>
-    <td><a href="https://www.jetbrains.com/"><img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_square.png" width="120" height="120" border="0" alt="JetBrains Black Box Logo logo"></a></td>
-    <td><a href="https://sourceforge.net/"><img src="https://sourceforge.net/sflogo.php?type=17&group_id=3663829" alt="SourceForge" width=200></a></td>
-  </tr>
-</table>
+| 镜像 profile | 适用分区布局 | 设备树 |
+|------|----------|------------|
+| `gemtek_xr1710g` | 原厂 U-Boot 分区 | [`an7581-xr1710g.dts`](target/linux/airoha/dts/an7581-xr1710g.dts) |
+| `gemtek_xr1710g-ubi` | OpenWrt U-Boot UBI 布局 | [`an7581-gemtek-xr1710g-ubi.dts`](target/linux/airoha/dts/an7581-gemtek-xr1710g-ubi.dts) |
+
+## 设备参数
+
+- 默认管理地址：http://192.168.50.1 或 http://XR1710G.lan
+- 用户名：**root**
+- 密码：*无*
+
+首次启动的无线网络名称为 `Brightspeed-XR1710G`（2.4GHz、5GHz、6GHz 三个频段同名），初始密码为 `password`。
+
+2.4GHz 使用 WPA2，5GHz 使用 WPA2/WPA3 混合模式，6GHz 使用 WPA3。
+
+首次登录后请及时修改管理密码和无线密码。
+
+| 项目 | 参数 |
+|------|------|
+| **SoC** | Airoha AN7581GT（1.3GHz 4 核 CPU + 8 核 NPU） |
+| **内存** | 2GB |
+| **闪存** | 512MB |
+| **网口** | 2×10G RTL8261BE + 2×1G AN7581 |
+| **无线** | MediaTek MT7996AV，2.4GHz/5GHz/6GHz 三频 Wi-Fi 7 |
+| **PWM 风扇** | 新唐 NCT7802 |
+| **电源规格** | 12V 5A |
+
+### 无线局域网（MT7996AV BE19000）
+
+| 频段 | 芯片 | 规格 | 最高速率 |
+|------|------|------|----------|
+| WLAN1 | MT7976GN | 2.4GHz 4×4 (Tx/Rx) 4096 QAM 40 MHz | 1376 Mbps |
+| WLAN2 | MT7977BN | 5GHz 4×4 (Tx/Rx) 4096 QAM 160 MHz | 5.76 Gbps |
+| WLAN3 | MT7977AN | 6GHz 4×5 (Tx/Rx) 4096 QAM 320 MHz (backhaul) | 10 Gbps |
+
+## 固件特性
+
+### 硬件适配
+
+- 两种分区布局各用一份设备树：原厂 U-Boot 布局用 [an7581-xr1710g.dts](target/linux/airoha/dts/an7581-xr1710g.dts)，OpenWrt U-Boot UBI 布局用 [an7581-gemtek-xr1710g-ubi.dts](target/linux/airoha/dts/an7581-gemtek-xr1710g-ubi.dts)（参考 [pbs05/uboot-an758x](https://github.com/pbs05/uboot-an758x) 的引导方案）。
+- UBI 布局首次启动前，需把原厂 `dsd` 分区去除 OOB 后的 2 MiB 主数据恢复到 UBI `factory` 卷；其中 `0x006c/0x0086` 为 WAN/LAN MAC，`0x5000` 起为 MT7996 校准数据。
+- 内核补丁（[airoha](target/linux/airoha/patches-6.18/)、[generic](target/linux/generic/pending-6.18/)）：RTL8261BE SerDes/USXGMII 调优、PCIe 3.0 x2 链路修复、NPU 恢复与固件加载、PPE/flowtable 硬件卸载与 WLAN 流绑定、RX ring 扩容。
+- 无线补丁：[mt76](package/kernel/mt76/patches/)（MT7996 MLO 稳定性、速率控制）、[mac80211](package/kernel/mac80211/patches/subsys/411-mac80211-export-link-sta-capability-limits.patch) 与 [hostapd](package/network/services/hostapd/patches/)（6GHz、EHT、多 VAP）。
+
+### 默认设置
+
+- 管理地址 `192.168.50.1`；IPv6 使用 SLAAC，关闭 DHCPv6 与 RA DNS。
+- 默认开启软件与硬件 flow offload；VLAN、PPPoE 透传和 AP 模式卸载可在 NPU 页面按需启用。
+- 三频默认启用：2.4GHz EHT20 信道 1，5GHz EHT80 信道 36，6GHz EHT160 信道 37。
+- 软件源：`/etc/apk/repositories.d/distfeeds.list` 只启用 ImmortalWrt 下载服务器实际发布的 feed（base、packages、luci、routing、telephony）；编译进固件的第三方 feed（`app_airoha`、`vantage` 等）以注释行保留，`apk update` 不会因 404 失败。详见[本地构建](docs/build.md#2-生成配置)。
+- 默认主题 Vantage（首次启动由 `files/etc/uci-defaults/99-vantage` 设定，外观默认浅色、品牌位显示主机名，只补充未设置的选项）；SmartDNS 默认关闭，端口 6053，不接管 dnsmasq；时间同步由 chrony 负责。
+
+### 预装 LuCI 应用
+
+| 分类 | 应用 |
+|------|------|
+| 设备 | NPU 状态与加速 `luci-app-airoha-npu`、风扇控制 `luci-app-airoha-fancontrol`、网络模式 `luci-app-netmode` |
+| 网络 | 防火墙 `luci-app-firewall`、UPnP `luci-app-upnp`、IP/MAC 绑定 `luci-app-arpbind`、Wi-Fi 7 多链路 `luci-app-mlo`、在线客户端 `luci-app-clients`、SmartDNS `luci-app-smartdns`、无线中继 `luci-proto-relay` |
+| 系统 | 包管理 `luci-app-package-manager`、Web 终端 `luci-app-ttyd`、定时重启 `luci-app-autoreboot`、网络唤醒 `luci-app-wol` / `luci-app-timewol`、Wi-Fi 定时开关 `luci-app-wifischedule`、网络看门狗 `luci-app-watchcat`、时间同步 `luci-app-chrony` |
+| 界面 | 主题 `luci-theme-vantage`、仪表盘 `luci-app-vantage`、按设备流量 `luci-app-vantage-traffic` |
+
+### 主要系统包
+
+**网络核心**
+- `dnsmasq-full`（完整版 DNS/DHCP）
+- `firewall4` + `nftables-json`（nftables 防火墙）
+- `wpad-mesh-mbedtls`（WPA2/WPA3、EHT/MLO 与 Mesh 支持）
+- `odhcp6c` / `odhcpd-ipv6only`（IPv6）
+- `ppp` / `ppp-mod-pppoe` / `pppoe-discovery`（PPPoE）
+- `smartdns` + `smartdns-ui`（DNS 加速/分流）
+- `wireguard-tools` + `rpcd-mod-wireguard`（WireGuard；不预装 `luci-proto-wireguard`）
+- `relayd`（无线中继）
+- `chrony`（时间同步，取代 busybox ntpd/sysntpd）
+- `bridger` / `nlbwmon`（桥接加速 / 流量统计）
+
+**内核模块（kmod）**
+- `kmod-mt7996-firmware` / `kmod-mt7996e`（MT7996 Wi-Fi 7 驱动）
+- `airoha-en7581-mt7996-npu-firmware`（Airoha NPU 固件）
+- `kmod-crypto-hw-eip93` / `kmod-cryptodev` / `kmod-crypto-user`（硬件加密加速与用户态接口）
+- `kmod-nft-offload`（硬件流量卸载）
+- `kmod-nft-queue` / `kmod-nfnetlink-queue`（nftables 用户态队列）
+- `kmod-br-netfilter` / `kmod-tcp-bbr`（桥接 Netfilter / BBR 拥塞控制）
+- `kmod-wireguard`（WireGuard 内核支持）
+- `kmod-veth` / `kmod-tun` / `kmod-dummy`（虚拟网络设备）
+- `kmod-sched-core` / `kmod-sched-bpf` / `kmod-xdp-sockets-diag`（流量调度与 BPF/XDP 诊断）
+- `kmod-nft-tproxy` / `kmod-nft-socket` / `kmod-inet-diag`（透明代理与套接字诊断）
+- `kmod-hwmon-nct7802`（NCT7802 温度传感器）
+- `kmod-leds-gpio` / `kmod-gpio-button-hotplug`
+- `kmod-phy-realtek` / `kmod-mt76-connac` / `kmod-mt76-core`
+- `rtl826x-firmware`（RTL8261BE PHY 固件）
+
+**系统工具**
+- `bash` / `coreutils` / `curl` / `ip-full` / `jq` / `yq` / `flock` / `mount-utils`
+- `ethtool-full` / `pciutils` / `uboot-envtools` / `arp-scan` / `socat`
+- `iperf3`（内置测速服务端/客户端）
+- `luci-theme-vantage` + `luci-app-vantage` + `luci-app-vantage-traffic`（含 zh-cn 翻译）+ `luci-theme-bootstrap`
+- `default-settings-chn`（中文默认设置）
+
+**代理与网络核心**
+- `simple-obfs-client` / `chinadns-ng` / `geoview`
+- `dns2socks` / `microsocks` / `ipt2socks`
+
+## 致谢
+
+### 上游固件
+- [immortalwrt/immortalwrt](https://github.com/immortalwrt/immortalwrt) - ImmortalWrt 主项目
+- [immortalwrt/luci](https://github.com/immortalwrt/luci) - LuCI Web 界面
+- [immortalwrt/packages](https://github.com/immortalwrt/packages) - 社区软件包仓库
+- [openwrt/routing](https://github.com/openwrt/routing) - OpenWrt 路由相关包
+- [openwrt/mt76](https://github.com/openwrt/mt76) - MediaTek WiFi 驱动
+
+### 参考项目
+- [naoki66/ImmortalWrt-for-Gemtek-brightspeed](https://github.com/naoki66/ImmortalWrt-for-Gemtek-brightspeed) - 本项目的直接上游移植
+- [YYH2913/openwrt](https://github.com/YYH2913/openwrt) - XR1710G 6.18 内核集成参考（an7581-xr1710g.dts 基础结构）
+- [hurrian/openwrt-w1700k](https://github.com/hurrian/openwrt-w1700k) - XR1710G PCIe 3.0 x2 补丁参考（912 Gen3 速度协商）
+- [lvcdy/openwrt_xr1710g](https://github.com/lvcdy/openwrt_xr1710g) - XR1710G 早期移植参考（分区表、PHY 配置）
+
+### LuCI 应用来源
+- [naoki66/luci-app-airoha](https://github.com/naoki66/luci-app-airoha) - Airoha LuCI 应用 feed，包含 `luci-app-airoha-npu`
+- [Gilly1970/Gemtek-W1700K](https://github.com/Gilly1970/Gemtek-W1700K) - Airoha 风扇控制与 FlowSense（commit db3f1c8）
+- [anothaDev/luci-theme-vantage](https://github.com/anothaDev/luci-theme-vantage) - Vantage 主题、仪表盘与流量插件（v1.2.0，GPL-3.0-or-later）
+
+## 许可证
+
+[GPL-2.0-only](https://spdx.org/licenses/GPL-2.0-only.html)（继承 ImmortalWrt）

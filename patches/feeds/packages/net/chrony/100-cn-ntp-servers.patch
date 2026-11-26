@@ -1,0 +1,29 @@
+diff --git a/net/chrony/files/chrony.config b/net/chrony/files/chrony.config
+index f9d838c2..5f73f22e 100644
+--- a/net/chrony/files/chrony.config
++++ b/net/chrony/files/chrony.config
+@@ -1,10 +1,18 @@
+-config pool
+-	option hostname '2.openwrt.pool.ntp.org'
+-	option maxpoll '12'
+-	option maxsources '4'
++config server
++	option hostname 'ntp.tencent.com'
++	option iburst '1'
++
++config server
++	option hostname 'ntp1.aliyun.com'
++	option iburst '1'
++
++config server
++	option hostname 'ntp.ntsc.ac.cn'
++	option iburst '1'
++
++config server
++	option hostname 'cn.ntp.org.cn'
+ 	option iburst '1'
+-	option prefer '0'
+-	# option xleave '0'
+ 
+ config dhcp_ntp_server 'dhcp_ntp_server'
+ 	option iburst '1'

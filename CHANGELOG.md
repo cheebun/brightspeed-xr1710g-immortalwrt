@@ -1,0 +1,310 @@
+# 更新日志
+
+本文件记录 Gemtek Brightspeed 固件仓库的重要功能、稳定性和维护变更。常规的
+ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或运行行为的内容。
+
+## 2026-11-25
+
+### distfeeds.list 改为注释未发布的 feed
+
+- 撤销 11-10 在 `include/feeds.mk` 中加入的 `DISTFEEDS_FEEDS` 白名单（及
+  `scripts/feeds` 中对应的帮助文字）。它直接删掉非白名单 feed 的行，并误把
+  下载服务器上不存在的 `video` 当作已发布。
+- 改用上游机制：新增 `scripts/distfeeds-config.sh`，为不在 `DISTFEEDS_HOSTED`
+  （默认 `packages luci routing telephony`）中的 feed 输出 `CONFIG_FEED_<name>=m`，
+  `include/feeds.mk` 会把这些 feed 写成 `# ` 开头的注释行。CI 在 `make defconfig`
+  后确认 `=m` 保留。
+- 配置合并改为 `scripts/merge-config-fragment.sh`：原 awk 只删除种子里清单键的
+  `=y`/`is not set` 取值，`=m` 等其他取值不会被覆盖。
+- 新增 `scripts/check-distfeeds.sh`：编译后探测每个设备 rootfs 的
+  `distfeeds.list`，未注释行返回 403/404/410 时构建失败，超时或 5xx 只警告；
+  注释行可访问时提示加入 `DISTFEEDS_HOSTED`。测试为 `scripts/test-distfeeds.sh`。
+- 编译失败后的详细重试不再拼出 `make package/package/...`。
+
+### 默认主题改为 Vantage
+
+- 新增 `vantage` feed（`anothaDev/luci-theme-vantage`，固定在 v1.2.0 提交
+  `a7ff63b7`），预装 `luci-theme-vantage`、`luci-app-vantage`（仪表盘）、
+  `luci-app-vantage-traffic` 及其 zh-cn 翻译；`luci-theme-bootstrap` 保留为备用
+  主题。不选择 `luci-app-vantage-aps`。
+- 移除 Argon：删除 `100-default-theme-argon`（luci-base）与
+  `100-xr1710g-argon-defaults`（luci-theme-argon）两个 feed 补丁，
+  `luci-theme-argon`、`luci-app-argon-config` 不再选择。`luci-theme-glass`
+  的 feed 早已停用，配置中的 `=y` 一并关闭。
+- 仓库根目录的 `files/` 改为纳入版本管理（构建系统会把它覆盖到每个镜像）：
+  `etc/uci-defaults/99-vantage` 在主题存在时注册并选用 Vantage，并只在未设置时
+  写入外观默认值（浅色、品牌位显示主机名）；`usr/share/luci/menu.d/zz-landing-override.json`
+  把“状态”菜单的顺序设为 2。
+- 新增 `scripts/check-luci-theme.sh`：`make defconfig` 后检查主题相关包已选、
+  Argon/Glass/aps 未选；编译后检查每个设备 rootfs 含 Vantage 的样式、模板、
+  `30_luci-theme-vantage`、`99-vantage` 与合法的菜单覆盖文件，且不含 Argon。
+
+### 移除 dawn 6 GHz 补丁
+
+- 删除 `patches/feeds/packages/net/dawn/100-dawn-6ghz-band.patch`。上游 DAWN
+  自 2026-11-11 起原生支持 6 GHz（频段 `DAWN_BAND_80211AX`，UCI 节 `802_11ax`），
+  早期补丁的 `802_11a_6g` 格式与之冲突，11-12 起剩下的 `dawn.config` 追加节也已无必要。
+- 现在直接使用 packages feed 的 dawn（`PKG_SOURCE_DATE` 2026-11-11，
+  `cf43b0f1`），其中包含 `168286e4`（拒绝缺少 rcpi/rsni/channel 的 beacon
+  report，修复空 beacon report 导致的段错误）。
+- 上游默认 `dawn.config` 没有 `802_11ax` 节，6 GHz 使用 DAWN 内置默认值：
+  `initial_score` 为 110（原补丁为 100），其余参数与原来相同。
+
+## 2026-11-12
+
+### dawn 与 feed 补丁
+
+- packages feed 的 DAWN 更新到 2026-11-11，已原生支持 6 GHz（UCI 节 `802_11ax`），
+  原来的 6 GHz 源码补丁打不上，dawn 编译失败。现在只保留 `dawn.config` 部分，
+  以上游节名 `802_11ax` 提供 6 GHz 参数，数值与原来相同。
+- `apply-feed-patches.sh` 改为按内容判断：以 feed 的 `HEAD` 为起点叠加全部补丁，
+  算出期望内容，只改写不一致的文件。原来先 `--check` 再 `--reverse --check` 的
+  判断有两种误判：末尾追加、且追加内容和上下文结尾相同的补丁（新的 dawn 补丁）
+  每次 `make` 都会再追加一遍；纯删除补丁在全新 feed 上会被误认为已打过。
+  被重复追加的工作区会在下次构建时自动修复。新增
+  `scripts/test-apply-feed-patches.sh`，CI 在打补丁前先运行。
+- 删除重复的 `python3/100-build-depend-libffi.patch`，与 11-10 同步带入的
+  `100-build-depend-on-libffi.patch` 内容完全相同。
+
+### 同步 naoki66 上游至 `eadbae0f`
+
+- NPU 一致性内存池：AN7581 的 NPU 只能访问 DRAM 前 1 GiB。新增 16 MiB 的
+  `npu_dma` 保留区（`0x84a00000`），并加入 928-01/02，让 mt76 交给 NPU 的
+  描述符环和 HW-RRO 缓冲固定从这段内存分配。NPU 固件区改名为 `firmware`，
+  驱动按索引查找，不受影响。
+- mt76（`PKG_RELEASE` 3→4）：NPU RX ring 修复（126）、mt7996 `reg_lock`
+  改用 irqsave 防止 AP 模式 panic（127）、整芯片复位与 L1 SER 恢复后重新
+  初始化 NPU（128/129）、probe 期间跳过 MCU 复位（132）、复位前先
+  `pci_clear_master` 并在关机时静默设备（133）、`GET_MIB_INFO` 超时改为
+  5 秒（134）。
+- PCIe PHY：IDAC 粗调跳过 0 值，与原厂搜索方式一致，并打印锁定结果（929-03）。
+- 作者对 `kmod-crypto-hw-airoha-eip93` 的改动未引入：本仓库用的是
+  `kmod-crypto-hw-eip93`，`crypto.mk` 里已经设置了相同的 AES/GCM 软件回退阈值。
+
+## 2026-11-10
+
+### 同步 naoki66 上游（仅 XR1710G 相关）
+
+- 合并 `naoki66/ImmortalWrt-for-Gemtek-brightspeed` 至 `a6dce40a`，只取内核、
+  airoha 平台、mt76、hostapd/wifi-scripts 与构建修复；XG2010G、Nokia 040、
+  PON、语音驱动以及作者的 CI、文档和 feed 调整不引入。
+- 内核补丁换成作者新版：PCS（621/624/629/630/745）、PCIe PERST 顺序（914）、
+  RX ring 补充（929）、PPE 卸载（9995/9996）与流统计容错（9999-14/15），
+  `675-0x` bridge flowtable 系列按 706-01 backport 重做。
+- 作者的 9995/9996 依赖 PON 补丁（920-17、920-20、922、925），本仓库不带这几个
+  补丁，新增 `9999-16-net-airoha-drop-pon-paths-from-ppe-offload.patch` 去掉
+  PON 专用代码（GEM 映射、PPPoE 重定向到 PON 口、xPON 组播兼容层），保留
+  QinQ/VPM、老化、丢弃原因统计和 debugfs。补丁序列在 6.18.60 上逐字节验证。
+- 跟随作者取消 AN7581 CPU 调频：内核关闭 `CPU_FREQ`，删除 0401/0402 直接
+  PLL 补丁与 `11-xr1710g-cpufreq-defaults`，`1710.config` 不再选择
+  `cpufreq`，CPU 保持启动固件设置的频率。
+- 删除 firewall4 的 bridge flowtable 补丁与 `50-fw4-bridge-reload`：内核没有
+  bridge flowtable 后端，`table bridge fw4` 永远为空。
+- 默认无线名称改为 `Brightspeed-XR1710G`（三频同名，初始密码不变）。
+
+## 2026-10-08
+
+### 同步 ImmortalWrt 上游至 6.18.54
+
+- 合并 `immortalwrt/immortalwrt` 的 306 个上游提交，内核补丁基线从 6.18.52
+  推进到 6.18.54。
+- 上游将 RTL8261C/D 的 LED 支持从 `hack-6.18/750-*` 迁出，改为新增
+  `pending-6.18/721-02-net-phy-realtek-add-LED-support-for-RTL8261C-D.patch`
+  并补齐亮度、极性和使能位处理，因此删除本地已无用的 `hack-6.18/750-*`。
+- `pending-6.18/737-02` phylink PCS 补丁改用上游版本：本地此前的 v15 写法
+  与上游 v3 写法功能完全等价，而上游版本已按 6.18.54 基线校订行号。
+- `pending-6.18/743` RTL8261N USXGMII SerDes 补丁保留本地的 `sds_work`
+  竞态修复语义（`READ_ONCE`/`WRITE_ONCE` 发布顺序，以及每次寄存器访问前和
+  重新排队前的 disable 检查），叠加在上游的行号框架之上。
+
+### 修正路由式 IPTV 组播丢包（引入 PonWrt #29）
+
+- 引入 `pbs05/ponwrt#29` 的 `airoha: restore opt-in fraglist GRO` 修复。上游
+  `hack-6.18/600` 把 `NETIF_F_GRO_FRAGLIST` 设为默认开启后，fraglist GRO 会把
+  同流连续 UDP 报文合并成保留 DF 标志的超大 skb，该 skb 经 IPv4 组播路由转发
+  时在 `ipmr_prepare_xmit()` 被静默丢弃，导致高码率 IPTV 流大量丢包（组播不可
+  分片、无法收到 ICMP 错误，只有 `FragFails` 递增）。
+- 新增 `target/linux/airoha/patches-6.18/980-revert-fraglist-gro-by-default.patch`，
+  在 airoha target 内把 fraglist GRO 恢复为 opt-in 默认关闭，不改动通用补丁。
+- 该修复只影响 `NETIF_F_GRO_FRAGLIST` 软件路径，与 XR1710G 的
+  `NETIF_F_GRO_HW` 硬件 GRO（916-02 补丁）互不影响。
+
+## 2026-10-01
+
+### XG2010G FIT 动态扩容与产物检查
+
+- 修正将当前 339-LEB `fit` 动态卷误当成固定分区上限的问题。U-Boot 和
+  sysupgrade 都会保留 `fip`、`ubootenv`、`ubootenv2`、`factory`，删除
+  `rootfs_data` 后按新镜像大小重建 `fit`；因此将构建上限调整为 U-Boot
+  `0x90000000`/`0x94000000` 双缓冲允许的 64 MiB。
+- GitHub Actions 和远程 world 构建现在逐一检查所选设备的 sysupgrade ITB，
+  防止 `check-size` 删除超限镜像后仍把仅生成 manifest 的构建报告为成功。
+
+## 2026-09-30
+
+### XG2010G 固件生成与 ONU 包改名
+
+- 将 XG2010G 配置选择从 `luci-app-pon` 更新为改名后的 `luci-app-onu`，并同步
+  XR1710G 的隔离规则和文档引用。
+- 禁用 XG2010G 的 initramfs 目标，避免并行构建时 initramfs 内核覆盖普通内核，
+  随后又在 FIT 中追加 squashfs，造成固件尺寸重复并被 `IMAGE_SIZE` 检查删除。
+- XG2010G 不再选择 `luci-theme-glass`，XR1710G 配置继续提供该主题。
+- profile 隔离检查现在要求 `luci-app-onu`，并拒绝 XG2010G 配置重新启用
+  initramfs。
+
+## 2026-09-28
+
+### XG2010G PON 用户态与 LuCI
+
+- 将 `pon_userspace` feed 从 `pbs05/openwrt-pon-userspace` 切换到
+  `naoki66/openwrt-pon-userspace`。
+- 使用新版 `luci-app-pon` 的“网络 → ONU”菜单，按状态、硬件身份、认证配置、
+  IPTV、语音和诊断组织页面。
+- IPTV 页面、ACL、UCI 配置和应用服务已并入 `luci-app-pon`，从 XG2010G
+  配置中移除已废弃的独立 `luci-app-iptv` 包选择。
+- `pon_userspace` feed 和 `luci-app-pon` 仅由 XG2010G 的 `2010.config` 启用，
+  XR1710G 的 `1710.config` 明确保持禁用。
+
+## 2026-09-23
+
+本条目覆盖 XR1710G 从 `20260916-e8702ccc61` 到 `b94f6f29b3` 的变更。同期
+XG2010G 专属的 PON、ToD、BoB 和 PCM/语音功能不计入 XR1710G 运行面。
+
+### 上游同步
+
+- 合并 ImmortalWrt `master` 至 `b80b090e8e`，本地 merge commit 为
+  `b94f6f29b3`；此前还通过 `669668ec3e` 和 `ba2d9bc4f3` 引入上游。
+- Linux 6.18 从 `.44` 更新到 `.52`，包含 6.18.45 至 6.18.52 的稳定版
+  修复，并同步刷新 Airoha、Realtek PHY 和通用内核补丁上下文。
+- 引入 Airoha 上游改动，包括 Quantum Fiber Q1000K、RX ring 扩容、
+  AN7583 PCIe Gen3 PHY，以及 phylink/PCS 相关修复。
+- 引入 netifd、mac80211、procd、odhcpd、dnsmasq、dropbear 和 comgt
+  等共享软件包更新；其中 mt76 TX worker CPU 绑定和流卸载修复对 XR1710G
+  的无线与转发路径有直接影响。
+
+### XR1710G 设备与网络
+
+- 为 XR1710G 的 Airoha I2C 控制器设置 `airoha,airoha-i2c` 兼容项和
+  400 kHz 总线频率，继续支持 NCT7802 硬件监控。
+- 增加 AN7581 10G PCS link bring-up 修复，覆盖 JCPLL/TCLVAR、PCS
+  restart 和按接口跟踪 PCS 状态。
+- 同步 phylink PCS 到 v15 API：PCS provider 使用引用计数式
+  acquire/release，PCS list 由 state mutex 保护，并补齐 PCS disable、
+  link down 和 major configuration 强制重建路径。
+- 修复 RTL8261BE/RTL8261N USXGMII SerDes reset work 与 PHY teardown
+  的竞态：PHY 离开 running 状态时禁止并停用 delayed work，阻止旧 work
+  在设备关闭后继续访问 SerDes 或重新排队。
+- Airoha MAC 在共享 QDMA 停止后断开 PHY，避免重新打开接口时复用已被
+  teardown 的 link state。
+- 将 MT7996 板级默认值、无线缓冲区、PPE reload 和 packet steering
+  移入 `airoha-an7581-mt7996-board`，由 XR1710G/W1700K 选择。
+- 明确排除 PON firmware/manager、xPON、GPON IGMP、PON VLAN、ToD 和
+  PCM/语音组件，避免 XG2010G 功能进入 XR1710G 镜像或内核配置。
+- 对照 `immortalwrt_pon` 的 `675-01`、`675-02` 和 `675-09` 补充桥接
+  conntrack 的 PPPoE、PPPoE-in-Q 和双层 VLAN（内层 802.1Q，外层
+  802.1Q/802.1ad）跟踪；修复非零 network offset 下的 L3/L4 校验和计算。
+- 在 XR1710G 的 XFRM/SOE flow offload 补丁之后检查 `nft_thoff()`：
+  未解析 L4 偏移时跳过卸载，保留软件转发，避免双层 VLAN/PPPoE 流量
+  被错误绑定到 PPE；现有 `meta l4proto { tcp, udp }` firewall4 规则不受影响。
+
+### LuCI 与 Mesh
+
+- `luci-app-airoha` 统一 NPU 与 FlowSense 页面，状态和端口拓扑按设备树
+  生成，补充 CPU governor/max_freq 持久化、刷新时间、暗色主题和中英文翻译。
+- `luci-app-mesh-conf` 增加 DAWN 客户端引导、802.11k/v/r 支持和 6 GHz
+  频段补丁，并修复同步服务自愈、执行位和 SAE key 被空值覆盖的问题。
+- 新栈 `airoha-ponctl`、`airoha-pond`、`luci-app-pon`、ToD PHC 和 EN7581
+  PCM-SPI 语音功能仅进入 XG2010G 配置，不随 XR1710G 构建。
+
+### 构建与版本
+
+- 新增 `1710.config` 与 `2010.config` 双配置构建入口，GitHub Actions 可选择
+  设备配置，release 名称和文件名会包含对应型号。
+- 固件版本改为根据 `CONFIG_TARGET_PROFILE` 自动识别 XR1710G/XG2010G。
+- 新增 Gemtek profile 隔离检查，在构建前检查配置，在构建后检查 kernel
+  config 和 image manifest，防止 XR1710G 与 XG2010G 包集合互相污染。
+- 远程构建脚本支持选择 1710 或 2010 配置，构建失败时会尝试带 `V=s`
+  重新编译并保留详细日志。
+
+### 验证
+
+- `git diff --check` 通过。
+- XR1710G 和 XG2010G 的 profile 隔离检查均通过。
+- 本轮未执行完整固件构建。
+
+关键提交：`4b4ed05f79`、`31eda9dc56`、`4ebc4c2c9b`、`759359070c`、
+`b94f6f29b3`。
+
+## 2026-09-14
+
+### 上游同步
+
+- 合并 ImmortalWrt `master` 至 `3e246256ce`。
+- 对照 OpenWrt `main` `0d7bfcb7e31e` 复核 Airoha AN7581/AN7583 补丁集。
+
+### Airoha 网络修复
+
+- 移植 OpenWrt `002faeed3c91792a02abdb6f39b1a6b74052e992`：
+  `net: airoha: grow the small RX rings`。
+- 将强制送 CPU 的 RX ring 4 从 16 个 descriptor 扩大到 128 个，降低 PPPoE
+  Discovery、LCP、IPCP、CHAP、DHCPv6 和 LLDP 等突发流量耗尽 RX ring 的风险。
+- 将其他小型 RX ring 的默认 descriptor 数从 16 提高到 32，与厂商 SDK 默认值一致。
+- 刷新 `310-10`、`916-02`、`920-12`、`920-13` 的补丁上下文，使其适配新的
+  `RX_DSCP_NUM()` 定义；未改变这些补丁原有功能。
+
+### 补丁清理
+
+- 删除无消费者的 `303-01` 和 `303-02`。这两项只为未引入的 Airoha PHY
+  软件校准系列准备导出符号、共享寄存器头文件和校准等待函数。
+- 删除与上游 `221-01` 重复的 `0403` PM Domain Kconfig 修复，保留 `221-01`
+  作为 `ARCH_AIROHA` 启用 `AIROHA_CPU_PM_DOMAIN` 的唯一实现。
+- 保留 XR1710G 所需的 RTL826x SerDes、AN7581 USXGMII、PCIe 3.0 x2、NPU、
+  PPE/flowtable、GPIO、MIB 统计和无 BL31 启动兼容补丁。
+- 未引入 OpenWrt 的 `602-04`，因为该补丁仅提供 AN7583 PCIe PHY 驱动，
+  XR1710G 的 AN7581 配置未启用该驱动。
+
+### 验证
+
+- 新增 RX ring 补丁与 OpenWrt 官方文件的 Git blob 均为
+  `3a21a65022acaba07679f01663678afbccc9b640`。
+- `git diff --check` 通过，Airoha 6.18 补丁目录未引入 BOM 或 CRLF。
+- 按本次维护要求未执行固件或内核编译。
+
+相关提交：`a6b69e04dc`。
+
+## 2026-09-08
+
+- 为 ucode 增加 `msleep`，并替换原有 `uloop.sleep` 调用，避免不必要的事件循环阻塞。
+
+相关提交：`4974641d84`。
+
+## 2026-09-07
+
+- 新增 `scripts/set-build-version.sh`，在构建配置中写入日期、仓库提交和上游提交信息。
+- 调整 Airoha NPU 与 FlowSense 页面：统一 VLAN 标签卸载、PPPoE 透传卸载文案，
+  增加设备模式检测，并限制路由模式下不适用的桥接卸载操作。
+- 移除 NPU 页面中的超频功能。
+- 新增并完善 `luci-app-airoha-factory`，支持原厂序列号、MAC/BSSID 查看与修改，
+  修复 MTD 分区识别、RPC 脚本权限和表单交互问题。
+- 修复 MT7996 电源同步事件解析和 EEPROM 发射功率处理。
+- 更新 RTL826x SerDes 与 Linux 6.18.44 相关补丁上下文。
+
+对应版本标签：`20260907-ea01178178`。
+
+## 2026-08-31
+
+- 修复 XR1710G 的 AN7581 USXGMII 速率适配、RX 校准和可选 TX FIR 参数。
+- 恢复并稳定 RTL826x 主机侧 SerDes 配置，改善 10G PHY 与 AN7581 PCS 的协商。
+- 修复 Airoha MIB 统计丢失、AN7581 GPIO mux 和桥接本地流量的 PPE 分类。
+- 完善 VLAN ingress、桥接 L2 fallback、DHCP 客户端标识和镜像内 `px5g` 支持。
+
+对应版本标签：`20260831-131ef84fe9`。
+
+## 2026-08-20
+
+- 合并 YYH XR1710G Linux 6.18 集成，统一 AN7581/AN7583 内核补丁基线。
+- 清理已进入 Linux 6.18.44 基线的回移补丁，并刷新仍需保留的 Airoha 补丁上下文。
+- 保留 XR1710G 设备树、PCIe 3.0 x2、NPU/Wi-Fi 卸载、SOE/XFRM 和本地 LuCI 定制。
+- 修复上游合并后自定义固件版本元数据被覆盖的问题。
+
+对应版本标签：`20260820-a60889b870`。

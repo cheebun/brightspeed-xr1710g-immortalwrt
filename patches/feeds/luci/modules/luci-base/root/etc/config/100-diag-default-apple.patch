@@ -1,0 +1,13 @@
+diff --git a/modules/luci-base/root/etc/config/luci b/modules/luci-base/root/etc/config/luci
+index 35fdbaa..a4da72f 100644
+--- a/modules/luci-base/root/etc/config/luci
++++ b/modules/luci-base/root/etc/config/luci
+@@ -21,3 +21,8 @@ config internal 'apply'
+ 	option holdoff '4'
+ 	option timeout '5'
+ 	option display '1.5'
++
++config internal 'diag'
++	option dns 'apple.com'
++	option ping 'apple.com'
++	option route 'apple.com'

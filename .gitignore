@@ -13,7 +13,6 @@
 /logs
 /feeds
 /feeds.conf
-/files
 /target/linux/feeds
 /overlay
 /package/feeds
@@ -36,3 +35,30 @@ git-src
 .ccache
 .sccache
 .vscode*
+.workbuddy
+.codex-run*
+
+# --- XR1710G project rules ---
+# /files is tracked: it is the buildroot's rootfs overlay (package/Makefile and
+# include/image.mk copy it over every image), used for the LuCI theme defaults.
+/output/
+/.ccache/
+/.sccache/
+/backup/
+/testlogs/
+*.key
+*.pem
+key-build*
+.env
+.env.*
+.DS_Store
+# Upstream-public firmware signing sample keys: source content, keep tracked.
+!/package/boot/arm-trusted-firmware-microchipsw/src/keys/non-trusted-world.pem
+!/package/boot/arm-trusted-firmware-microchipsw/src/keys/nt-fw.pem
+!/package/boot/arm-trusted-firmware-microchipsw/src/keys/rot.pem
+!/package/boot/arm-trusted-firmware-microchipsw/src/keys/scp-fw.pem
+!/package/boot/arm-trusted-firmware-microchipsw/src/keys/soc-fw.pem
+!/package/boot/arm-trusted-firmware-microchipsw/src/keys/tos-fw.pem
+!/package/boot/arm-trusted-firmware-microchipsw/src/keys/trusted-world.pem
+# Temp files left by scripts/set-build-version.sh if interrupted
+*.config.version.*

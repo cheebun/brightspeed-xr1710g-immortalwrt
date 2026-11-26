@@ -1,0 +1,33 @@
+#!/bin/sh
+# Make Vantage the LuCI theme and seed its appearance preferences.
+#
+# Runs once on the first boot of a new image (also after a sysupgrade that
+# keeps the settings). luci-theme-vantage's own 30_luci-theme-vantage selects
+# the theme only on a fresh install and only when its entry is new; this
+# selects it every time a new image boots. The preferences in vantage_theme
+# are set only where none is saved, so a choice made under the theme's
+# Appearance button or the dashboard's Customize survives an upgrade.
+
+# No theme, nothing to select (the script is not run again).
+[ -d /www/luci-static/vantage ] || exit 0
+
+uci -q set luci.themes.Vantage=/luci-static/vantage &&
+	uci -q set luci.main.mediaurlbase=/luci-static/vantage &&
+	uci -q commit luci || exit 1
+
+# The package ships /etc/config/vantage_theme; never replace it.
+[ -f /etc/config/vantage_theme ] || touch /etc/config/vantage_theme
+uci -q get vantage_theme.appearance >/dev/null ||
+	uci -q set vantage_theme.appearance=appearance || exit 1
+
+# set_default <option> <value>: set the option only when it is unset.
+set_default() {
+	uci -q get "vantage_theme.appearance.$1" >/dev/null ||
+		uci -q set "vantage_theme.appearance.$1=$2"
+}
+
+set_default theme light &&
+	set_default brand hostname &&
+	uci -q commit vantage_theme || exit 1
+
+exit 0
