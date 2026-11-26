@@ -3,6 +3,20 @@
 本文件记录 Gemtek Brightspeed 固件仓库的重要功能、稳定性和维护变更。常规的
 ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或运行行为的内容。
 
+## 2026-11-26
+
+### dawn：修复 kick_clients() 释放后使用
+
+- 新增 feed 补丁 `patches/feeds/packages/net/dawn/100-dawn-fix-use-after-free-in-kick_clients.patch`，
+  提前引入上游 DAWN 提交 `e872108b3016`（2026-11-24 合入 master）：802.11v
+  踢除成功后客户端条目已被删除，循环仍读取 `j->next_entry_bc`。
+- 补丁为 dawn 加入 `net/dawn/patches/100-datastorage-fix-use-after-free-in-kick_clients.patch`
+  （上游补丁原文，附提交链接），并把 `PKG_RELEASE` 从 1 改为 2，便于区分。
+  feed 当前构建的 `cf43b0f1` 正是该修复的父提交，补丁无偏移、无 fuzz。
+- Makefile 片段以 `PKG_SOURCE_DATE`/`PKG_SOURCE_VERSION` 作为上下文，feed 一旦
+  更新 dawn，CI 的严格模式就会失败，以此提醒：feed 的 dawn 越过 `e872108b3016`
+  后删除此补丁。
+
 ## 2026-11-25
 
 ### distfeeds.list 改为注释未发布的 feed
