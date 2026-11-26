@@ -181,3 +181,17 @@ make -j"$(nproc)" world
 固件、manifest、校验值和构建信息位于 `bin/targets/airoha/an7581/`，两个 profile 的镜像文件名分别形如 `*gemtek_xr1710g-squashfs-sysupgrade.itb` 和 `*gemtek_xr1710g-ubi-squashfs-sysupgrade.itb`。实际使用的 feeds 提交以本次 `feeds.buildinfo` 为准；由于 feeds 浮动，这不是严格可复现构建。
 
 编译期间不要并行修改配置或应用上游补丁。无线客户端、中继接口、用户密码、SSH 密钥等属于设备设置，不从旧设备导入源码；全新固件中的上游默认无线口令应在部署时修改。
+
+## 上游同步
+
+本仓库基于 [cheebun/immortalwrt](https://github.com/cheebun/immortalwrt) 的 `base` 分支：ImmortalWrt master 加上合并进来的 OpenWrt 内核版本更新（当前 Linux 6.18.64），不包含 OpenWrt 的其他改动（例如 OpenWrt 官方的 XR1710G 设备支持）。本设备的 DTS、内核补丁与软件包以本仓库自己的文件为准。
+
+[`.github/workflows/sync-upstream.yml`](../.github/workflows/sync-upstream.yml) 手动触发，把 `cheebun/immortalwrt` 的 `base` 合并进触发它的分支并推送回该分支；合并有冲突时失败，需要在本地解决：
+
+```sh
+git remote add base https://github.com/cheebun/immortalwrt.git
+git fetch base base
+git merge base/base
+```
+
+合并后先确认内核补丁仍能应用（`make target/linux/{clean,prepare} V=s`），再推送。该工作流使用 `GITHUB_TOKEN` 推送，若一次合并修改了 `.github/workflows/` 下的文件，GitHub 会拒绝推送，需要用带 `workflow` 权限的令牌在本地合并后推送。

@@ -2,12 +2,12 @@
 
 # ImmortalWrt for Brightspeed XR1710G
 
-[![Upstream](https://img.shields.io/badge/upstream-immortalwrt%403e246256ce-blue)](https://github.com/immortalwrt/immortalwrt)
-[![Kernel](https://img.shields.io/badge/kernel-6.18.44-red)](https://www.kernel.org/)
+[![Base](https://img.shields.io/badge/based%20on-cheebun%2Fimmortalwrt%20base-blue)](https://github.com/cheebun/immortalwrt/tree/base)
+[![Kernel](https://img.shields.io/badge/kernel-6.18.64-red)](https://www.kernel.org/)
 [![SoC](https://img.shields.io/badge/SoC-Airoha%20AN7581GT-orange)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0-green)](https://spdx.org/licenses/GPL-2.0-only.html)
 
-基于 [ImmortalWrt](https://github.com/immortalwrt/immortalwrt) 与 [naoki66 的移植](https://github.com/naoki66/ImmortalWrt-for-Gemtek-brightspeed)，为 Brightspeed/Gemtek XR1710G 定制的固件。
+基于 [cheebun/immortalwrt base](https://github.com/cheebun/immortalwrt/tree/base)（ImmortalWrt master + OpenWrt 6.18 内核更新）与 [naoki66 的移植](https://github.com/naoki66/ImmortalWrt-for-Gemtek-brightspeed)，为 Brightspeed/Gemtek XR1710G 定制的固件。上游同步见 [构建文档](docs/build.md#上游同步)。
 
 项目的重要功能、稳定性和补丁维护记录见 [更新日志](CHANGELOG.md)。
 
@@ -147,6 +147,7 @@ SmartDNS、chrony 对时、relayd 无线中继、Vantage 主题（含仪表盘�
 ## 致谢
 
 ### 上游固件
+- [cheebun/immortalwrt](https://github.com/cheebun/immortalwrt/tree/base) - 本仓库的基线（`base` 分支）
 - [immortalwrt/immortalwrt](https://github.com/immortalwrt/immortalwrt) - ImmortalWrt 主项目
 - [immortalwrt/luci](https://github.com/immortalwrt/luci) - LuCI Web 界面
 - [immortalwrt/packages](https://github.com/immortalwrt/packages) - 社区软件包仓库

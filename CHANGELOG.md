@@ -3,6 +3,28 @@
 本文件记录 Gemtek Brightspeed 固件仓库的重要功能、稳定性和维护变更。常规的
 ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或运行行为的内容。
 
+## 2026-11-26
+
+### 基线改为 cheebun/immortalwrt base
+
+- 仓库改为以 [cheebun/immortalwrt](https://github.com/cheebun/immortalwrt/tree/base)
+  的 `base` 分支（ImmortalWrt master `73bc086a62` + OpenWrt 内核更新到 6.18.64）
+  为基线，原先的快照与 ImmortalWrt 没有共享历史。本仓库自己的改动分为设备支持、
+  内核补丁与内核配置、软件包、构建/CI/文档四个提交重新应用，设备文件保持本仓库
+  版本，未引入 OpenWrt 官方的 XR1710G 支持。
+- `/etc/init.d/led`：保留上游在写入 `device_name` 之后清除 netdev 模式的逻辑（只在
+  配置了 `mode` 时执行），用本仓库的 `led_netdev_mode_reset()` 实现；`offloaded=1`
+  时不写 `interval` 的判断保留。
+- eFuse：base 引入上游 SMC eFuse 驱动（`CONFIG_NVMEM_AIROHA_SMC_EFUSES`，AN7581，
+  按字读取）。本仓库的 `403` AN7583 eFuse 驱动（整块 DMA 读取，兼容串
+  `airoha,an7583-efuse`）与之不重叠，两者都保留。
+- `910-02-usb-pcie.patch` 改用 base `610-02` 已定义的 `REG_USB_PCIE_SEL_MASK`，
+  去掉重复的宏定义，行为不变。
+- ppp 随 base 升级到 2.5.5，已包含 `514-pppd-clear-pppdb-after-tdb_close` 的修复，
+  删除该补丁。
+- `sync-upstream.yml` 改为合并 `cheebun/immortalwrt` 的 `base`，推送回触发工作流
+  的分支（原先固定推送到 `main`）。
+
 ## 2026-11-25
 
 ### distfeeds.list 改为注释未发布的 feed

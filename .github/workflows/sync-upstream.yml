@@ -1,10 +1,15 @@
-name: Sync Upstream ImmortalWrt
+name: Sync Upstream Base
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# Base: cheebun/immortalwrt branch base (ImmortalWrt master + OpenWrt kernel bumps)
+env:
+  UPSTREAM_URL: https://github.com/cheebun/immortalwrt.git
+  UPSTREAM_BRANCH: base
 
 jobs:
   sync-upstream:
@@ -23,18 +28,18 @@ jobs:
 
       - name: Add upstream remote
         run: |
-          git remote add upstream https://github.com/immortalwrt/immortalwrt.git 2>/dev/null || true
-          git remote set-url upstream https://github.com/immortalwrt/immortalwrt.git
+          git remote add upstream "$UPSTREAM_URL" 2>/dev/null || true
+          git remote set-url upstream "$UPSTREAM_URL"
 
       - name: Fetch upstream
-        run: git fetch upstream master
+        run: git fetch upstream "$UPSTREAM_BRANCH"
 
       - name: Check for updates
         id: check
         run: |
           LOCAL=$(git rev-parse HEAD)
-          REMOTE=$(git rev-parse upstream/master)
-          if git merge-base --is-ancestor upstream/master HEAD; then
+          REMOTE=$(git rev-parse "upstream/$UPSTREAM_BRANCH")
+          if git merge-base --is-ancestor "upstream/$UPSTREAM_BRANCH" HEAD; then
             echo "No updates available (upstream: ${REMOTE:0:7}, local: ${LOCAL:0:7})"
             echo "has_updates=false" >> "$GITHUB_OUTPUT"
           else
@@ -45,7 +50,7 @@ jobs:
       - name: Merge upstream
         if: steps.check.outputs.has_updates == 'true'
         run: |
-          git merge --no-edit upstream/master || {
+          git merge --no-edit "upstream/$UPSTREAM_BRANCH" || {
             echo "::error::Merge failed. Conflicts need manual resolution."
             git diff --name-only --diff-filter=U
             exit 1
@@ -53,7 +58,7 @@ jobs:
 
       - name: Push to origin
         if: steps.check.outputs.has_updates == 'true'
-        run: git push origin HEAD:main
+        run: git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}"
 
       - name: Show result
         if: always()
