@@ -1,0 +1,62 @@
+From: Yanghan Ye <yyh94306@gmail.com>
+Date: Wed, 26 Aug 2026 10:37:13 +0800
+Subject: [PATCH] net: pcs: airoha: use SDK RX calibration crossing search
+
+The AN7581 PCS driver chooses the major CDR PR IDAC value whose FL_OUT
+is numerically closest to the target, then applies a heuristic minor-bit
+search. FL_OUT is not globally monotonic across all major ranges, so
+that can select the wrong interval and leave the FreqDet module
+unlocked.
+
+Airoha's SDK RX_PRCal() instead keeps the last major value above the
+target crossing and searches bits 7 through 0, retaining a bit only
+while FL_OUT remains at or above the target. Adapt that search order and
+remove the conflicting closest-value fallback.
+
+On an affected Gemtek XR1710G, the old search settled on IDAC 0x580 and
+failed to lock. A register scan following the SDK order selected 0x5a5,
+measured the exact 0x9edf target, and asserted FBCK_LOCK.
+
+The vendor SDK source tree does not retain VCS metadata identifying an
+individual author. The reference implementation is RX_PRCal() in:
+linux/arch/arm64/mach-econet/sgmii/air_eth_xsgmii.c
+
+Signed-off-by: Yanghan Ye <yyh94306@gmail.com>
+Signed-off-by: naoki66 <naoki66@qq.com>
+Assisted-by: Codex:GPT-5.6-sol
+--- a/drivers/net/pcs/airoha/pcs-an7581.c
++++ b/drivers/net/pcs/airoha/pcs-an7581.c
+@@ -1484,28 +1484,22 @@ static unsigned int an7581_pcs_apply_cdr
+ static u32 an7581_pcs_rx_prcal_idac_major(struct airoha_pcs_priv *priv,
+ 					  int index, u32 target_fl_out)
+ {
+-	unsigned int fl_out_diff = UINT_MAX;
+ 	unsigned int prcal_search;
+ 	u32 cdr_pr_idac = 0;
+ 
+-	for (prcal_search = 0; prcal_search < 8 ; prcal_search++) {
+-		unsigned int fl_out_diff_new;
++	for (prcal_search = 1; prcal_search < 8; prcal_search++) {
+ 		unsigned int fl_out;
+ 		u32 cdr_pr_idac_tmp;
+ 
+-		/* try to find the upper value by setting the last 3 bit */
++		/* Keep the last major value above the target crossing. */
+ 		cdr_pr_idac_tmp = FIELD_PREP(AIROHA_PCS_PMA_FORCE_CDR_PR_IDAC_MAJOR,
+ 					     prcal_search);
+ 		fl_out = an7581_pcs_apply_cdr_pr_idac(priv, index, cdr_pr_idac_tmp);
+ 
+-		/* Use absolute values to find the closest one to target */
+-		fl_out_diff_new = abs_diff(fl_out, target_fl_out);
+-		dev_dbg(priv->dev, "Tested CDR Pr Idac: %x Fl Out: %x Diff: %u\n",
+-			cdr_pr_idac_tmp, fl_out, fl_out_diff_new);
+-		if (fl_out_diff_new < fl_out_diff) {
++		dev_dbg(priv->dev, "Tested CDR Pr Idac: %x Fl Out: %x\n",
++			cdr_pr_idac_tmp, fl_out);
++		if (fl_out > target_fl_out)
+ 			cdr_pr_idac = cdr_pr_idac_tmp;
+-			fl_out_diff = fl_out_diff_new;
+-		}
+ 	}
+ 
+ 	return cdr_pr_idac;
