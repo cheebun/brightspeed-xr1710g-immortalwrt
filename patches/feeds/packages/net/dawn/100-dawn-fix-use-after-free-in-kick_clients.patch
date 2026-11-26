@@ -1,0 +1,73 @@
+From: xr1710g <xr1710g@local>
+Subject: [PATCH] dawn: fix use-after-free in kick_clients()
+
+Carry upstream DAWN commit e872108b3016 ("datastorage: fix use-after-free
+in kick_clients()") until the packages feed picks it up:
+https://github.com/berlin-open-wireless-lab/DAWN/commit/e872108b30169c94c133bfdb15a79b87f5dc9b2e
+
+A successful 802.11v kick deletes the client entry and the loop then reads
+j->next_entry_bc from the freed entry. The feed builds DAWN cf43b0f1
+(PKG_SOURCE_DATE 2026-11-11), the parent of the fix; the upstream patch
+applies to it unchanged. PKG_RELEASE goes from 1 to 2 so the patched
+package can be told apart from the feed's build.
+
+The Makefile hunk carries PKG_SOURCE_DATE and PKG_SOURCE_VERSION as
+context, so it stops applying (and the strict CI step fails) as soon as
+the feed bumps dawn. Drop this patch when the feed bumps dawn past
+e872108b3016.
+
+---
+diff --git a/net/dawn/Makefile b/net/dawn/Makefile
+index f25ace8..282bb84 100644
+--- a/net/dawn/Makefile
++++ b/net/dawn/Makefile
+@@ -5,9 +5,9 @@
+ include $(TOPDIR)/rules.mk
+ 
+ PKG_NAME:=dawn
+ PKG_SOURCE_DATE:=2026-11-11
+-PKG_RELEASE:=1
++PKG_RELEASE:=2
+ 
+ PKG_SOURCE_PROTO:=git
+ PKG_SOURCE_URL:=https://github.com/berlin-open-wireless-lab/DAWN.git
+ PKG_SOURCE_VERSION:=cf43b0f1d3c6abfa1e9b0d22a8c01c15668874db
+diff --git a/net/dawn/patches/100-datastorage-fix-use-after-free-in-kick_clients.patch b/net/dawn/patches/100-datastorage-fix-use-after-free-in-kick_clients.patch
+new file mode 100644
+index 0000000..8bd3e59
+--- /dev/null
++++ b/net/dawn/patches/100-datastorage-fix-use-after-free-in-kick_clients.patch
+@@ -0,0 +1,33 @@
++From e872108b30169c94c133bfdb15a79b87f5dc9b2e Mon Sep 17 00:00:00 2001
++From: 50mhz-turbo <50mhz-turbo@users.noreply.github.com>
++Date: Sun, 22 Nov 2026 21:18:07 +0100
++Subject: [PATCH] datastorage: fix use-after-free in kick_clients()
++
++A successful 802.11v kick (kick_type 1) deletes the client entry and then
++reads j->next_entry_bc from it. The loop would end at the next condition
++test anyway, because kicked_clients was incremented, so break out before
++that read.
++
++The field test used this change backported to dawn 2025.11.07~7414c34a-r1
++on OpenWrt 25.12.6; this commit is based on upstream cf43b0f.
++
++Upstream: https://github.com/berlin-open-wireless-lab/DAWN/commit/e872108b30169c94c133bfdb15a79b87f5dc9b2e
++---
++ src/storage/datastorage.c | 4 ++++
++ 1 file changed, 4 insertions(+)
++
++diff --git a/src/storage/datastorage.c b/src/storage/datastorage.c
++index ad7c394..30721d2 100644
++--- a/src/storage/datastorage.c
+++++ b/src/storage/datastorage.c
++@@ -722,6 +722,10 @@ int kick_clients(struct dawn_mac bssid_mac, uint32_t id) {
++         remove_kicking_nr_list(kick_nr_list);
++         kick_nr_list = NULL;
++ 
+++        /* A successful 802.11v kick deletes j; do not dereference it below. */
+++        if (kicked_clients)
+++            break;
+++
++         j = j->next_entry_bc;
++     }
++ 
