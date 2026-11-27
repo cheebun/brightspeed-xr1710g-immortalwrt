@@ -3,6 +3,19 @@
 本文件记录 Gemtek Brightspeed 固件仓库的重要功能、稳定性和维护变更。常规的
 ImmortalWrt 上游合并不逐项展开，仅记录会影响本设备构建或运行行为的内容。
 
+## 2026-11-27
+
+### 版本信息改用 cheebun/immortalwrt base 计算上游提交
+
+- `scripts/getver.sh` 与 `scripts/set-build-version.sh` 原先找 `upstream/master`，
+  仓库里不存在该引用，于是 `getver.sh` 回退为把本仓库提交当作上游提交
+  （`version.buildinfo` 形如 `日期-X-X`），`set-build-version.sh` 记为 `unknown`。
+  现在两者都取 `HEAD` 与 `refs/remotes/base/base`（`cheebun/immortalwrt` 的 `base`）
+  的 merge-base，输出格式不变；缺少该引用时告警并记为 `unknown`。
+- 新增 `scripts/fetch-upstream-base.sh`：添加/拉取 `base` 远程，浅克隆时逐步加深
+  到 merge-base。构建工作流在检出后运行它（失败重试 3 次）。
+- 新增 `scripts/test-getver.sh`。
+
 ## 2026-11-26
 
 ### 基线改为 cheebun/immortalwrt base

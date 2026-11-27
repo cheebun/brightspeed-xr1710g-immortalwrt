@@ -194,4 +194,6 @@ git fetch base base
 git merge base/base
 ```
 
+版本信息中的上游提交取 `HEAD` 与 `refs/remotes/base/base` 的 merge-base：`scripts/getver.sh`（`version.buildinfo`、`/etc/openwrt_release` 的 `DISTRIB_REVISION`，格式 `日期-上游提交-本仓库提交`）和 `scripts/set-build-version.sh`（未指定 `VERSION_CODE` 时的 `日期-本仓库提交-上游提交`）都读这个引用。本地构建前运行 `bash scripts/fetch-upstream-base.sh` 添加并拉取 `base` 远程；浅克隆时它只把历史加深到 merge-base 为止。缺少该引用或找不到 merge-base 时，两个脚本在 stderr 告警并把上游提交记为 `unknown`。`bash scripts/test-getver.sh` 覆盖这些情况。
+
 合并后先确认内核补丁仍能应用（`make target/linux/{clean,prepare} V=s`），再推送。该工作流使用 `GITHUB_TOKEN` 推送，若一次合并修改了 `.github/workflows/` 下的文件，GitHub 会拒绝推送，需要用带 `workflow` 权限的令牌在本地合并后推送。

@@ -21,6 +21,8 @@
 #   BUILD_TZ                日期时区（默认 Asia/Shanghai）
 #   BUILD_DATE / BUILD_TIME 构建日期 YYYYMMDD（默认取当前时间）
 #   REPO_COMMIT / UPSTREAM_COMMIT / BUILD_ID  手动指定 commit / 构建号
+#                           （UPSTREAM_COMMIT 默认取 HEAD 与 refs/remotes/base/base
+#                           的 merge-base，即 cheebun/immortalwrt base 上的分叉点）
 #   COMMIT_LEN              commit 缩写长度（默认 8）
 #   VERSION_NUMBER / VERSION_CODE / EXTRA_IMAGE_NAME  手动指定各段
 #   VERSION_FILENAMES       是否把版本号放进文件名（默认 y）
@@ -123,11 +125,20 @@ if [[ -z "$repo_commit" ]]; then
 fi
 repo_commit="${repo_commit:-unknown}"
 
+# 上游 = cheebun/immortalwrt 的 base 分支，以远程 base 拉取（scripts/fetch-upstream-base.sh），
+# 取 HEAD 与 refs/remotes/base/base 的 merge-base；拿不到时告警并记为 unknown。
+upstream_ref="refs/remotes/base/base"
 upstream_commit="${UPSTREAM_COMMIT:-}"
-if [[ -z "$upstream_commit" ]] && git rev-parse --verify upstream/master >/dev/null 2>&1; then
-	upstream_base="$(git merge-base HEAD upstream/master 2>/dev/null || true)"
-	if [[ -n "$upstream_base" ]]; then
-		upstream_commit="$(git rev-parse --short="$commit_len" "$upstream_base" 2>/dev/null || true)"
+if [[ -z "$upstream_commit" ]]; then
+	if git rev-parse --verify -q "${upstream_ref}^{commit}" >/dev/null 2>&1; then
+		upstream_base="$(git merge-base HEAD "$upstream_ref" 2>/dev/null || true)"
+		if [[ -n "$upstream_base" ]]; then
+			upstream_commit="$(git rev-parse --short="$commit_len" "$upstream_base" 2>/dev/null || true)"
+		else
+			echo "warning: no merge-base between HEAD and $upstream_ref (shallow clone?), upstream commit unknown" >&2
+		fi
+	else
+		echo "warning: $upstream_ref not found (run scripts/fetch-upstream-base.sh), upstream commit unknown" >&2
 	fi
 fi
 upstream_commit="${upstream_commit:-unknown}"

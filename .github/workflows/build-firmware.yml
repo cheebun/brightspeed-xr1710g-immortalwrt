@@ -28,6 +28,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Fetch upstream base
+        # scripts/getver.sh (version.buildinfo, REVISION) and
+        # scripts/set-build-version.sh report the merge-base of HEAD and
+        # cheebun/immortalwrt base. The helper deepens the shallow checkout
+        # only as far as that merge-base.
+        run: |
+          bash scripts/test-getver.sh
+          for attempt in 1 2 3; do
+            timeout 600 bash scripts/fetch-upstream-base.sh && break
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::could not fetch cheebun/immortalwrt base or find the merge-base"
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
+          bash scripts/getver.sh
+
       - name: Generate build version
         id: version
         run: |

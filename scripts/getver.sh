@@ -27,21 +27,25 @@ try_git() {
 		GET_REV="$(git log -n 1 --format="%h" --until "$GET_REV")"
 		;&  # FALLTHROUGH
 	*)
-		UPSTREAM_REF="$(git rev-parse --verify upstream/master 2>/dev/null)"
-		if [ -z "$UPSTREAM_REF" ]; then
-			BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-			UPSTREAM_REF="$(git rev-parse --verify --symbolic-full-name ${BRANCH}@{u} 2>/dev/null)"
-			[ -n "$UPSTREAM_REF" ] || UPSTREAM_REF="$(git rev-parse --verify --symbolic-full-name main@{u} 2>/dev/null)"
-		fi
-
-		if [ -n "$UPSTREAM_REF" ]; then
-			UPSTREAM_BASE="$(git merge-base $GET_REV $UPSTREAM_REF)"
-			UPSTREAM_HASH="$(git log -n 1 --no-show-signature --format="%h" $UPSTREAM_BASE)"
+		# Upstream is cheebun/immortalwrt `base`, fetched as remote `base`
+		# (scripts/fetch-upstream-base.sh). Without that ref, or without
+		# enough history to reach the fork point, report "unknown".
+		UPSTREAM_REF="refs/remotes/base/base"
+		UPSTREAM_BASE=""
+		if git rev-parse --verify -q "${UPSTREAM_REF}^{commit}" >/dev/null; then
+			UPSTREAM_BASE="$(git merge-base "$GET_REV" "$UPSTREAM_REF" 2>/dev/null)"
+			[ -n "$UPSTREAM_BASE" ] || echo "getver.sh: warning: no merge-base between $GET_REV and $UPSTREAM_REF (shallow clone?), upstream commit unknown" >&2
 		else
-			UPSTREAM_HASH="$(git log -n 1 --no-show-signature --format="%h" $GET_REV)"
+			echo "getver.sh: warning: $UPSTREAM_REF not found (run scripts/fetch-upstream-base.sh), upstream commit unknown" >&2
 		fi
 
-		LOCAL_HASH="$(git log -n 1 --no-show-signature --format="%h" $GET_REV)"
+		if [ -n "$UPSTREAM_BASE" ]; then
+			UPSTREAM_HASH="$(git log -n 1 --no-show-signature --format="%h" "$UPSTREAM_BASE")"
+		else
+			UPSTREAM_HASH="unknown"
+		fi
+
+		LOCAL_HASH="$(git log -n 1 --no-show-signature --format="%h" "$GET_REV")"
 		BUILD_DATE="$(date +%Y-%-m-%-d)"
 
 		REV="${BUILD_DATE}-${UPSTREAM_HASH}-${LOCAL_HASH}"
